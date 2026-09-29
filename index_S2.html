@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>詩詞朗讀｜朗讀練習（無障礙版）</title>
+
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<style>
+/* ============================================================
+   一般模式（預設）
+   ============================================================ */
+:root {
+  --base-font-size: 36px;
+  --bg: #0a0a12;
+  --text: #ffffff;
+  --pinyin: #4fc3f7;
+  --highlight-bg: #2b2b00;
+  --highlight-hanzi: #ffffff;
+  --highlight-pinyin: #4fc3f7;
+  --btn-bg: #222831;
+  --btn-hover: #393e46;
+  --btn-min: 48px;
+  --btn-radius: 10px;
+  --focus-ring: #ffff00;
+  --line-height: 2.4;
+  --icon-size: 24px;
+
+  /* 錄音按鈕位置（水平置中） */
+  --fab-bottom: calc(90px + env(safe-area-inset-bottom));
+  --fab-size: 72px;
+}
+
+/* ============================================================
+   無障礙模式
+   ============================================================ */
+body.a11y-mode {
+  --bg: #000000;
+  --text: #FFFFFF;
+  --pinyin: #00FFCC;
+  --highlight-bg: #FFFF00;
+  --highlight-hanzi: #000000;
+  --highlight-pinyin: #FF0000;
+  --btn-min: 80px;
+  --btn-radius: 16px;
+  --line-height: 2.6;
+  --icon-size: 32px;
+
+  --fab-bottom: calc(max(140px, 20vh) + 14px + env(safe-area-inset-bottom));
+  --fab-size: 88px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sentence-active { transform: none !important; transition: none !important; }
+  .record-fab.playing-back .wave-bar { animation: none !important; }
+  * { animation: none !important; transition: none !important; }
+}
+
+* { box-sizing: border-box; cursor: default; }
+button { cursor: pointer; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* ============================================================
+   頂部工具列
+   ============================================================ */
+.top-setting-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 2px solid #222;
+  min-height: 56px;
+}
+
+body.a11y-mode .top-setting-bar {
+  height: auto;
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.top-setting-bar h1 {
+  margin: 0;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.mode-btn {
+  min-width: var(--btn-min);
+  min-height: var(--btn-min);
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: bold;
+  border: 2px solid #00FFCC;
+  border-radius: var(--btn-radius);
+  background: var(--btn-bg);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mode-btn[aria-pressed="true"] { background: #00FFCC; color: #000000; }
+.mode-btn:focus-visible { outline: 4px solid var(--focus-ring); outline-offset: 3px; }
+
+select {
+  font-size: 15px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+/* ============================================================
+   作品選擇列
+   ============================================================ */
+.poem-selector {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 2px solid #222;
+}
+
+.poem-btn {
+  min-width: 150px;
+  min-height: 56px;
+  padding: 8px 18px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid #00FFCC;
+  border-radius: var(--btn-radius);
+  background: var(--btn-bg);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.poem-btn.active {
+  background: #00FFCC;
+  color: #000000;
+}
+
+.poem-btn:focus-visible {
+  outline: 4px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+body.a11y-mode .poem-selector {
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+body.a11y-mode .poem-btn {
+  min-width: 200px;
+  min-height: 64px;
+  font-size: 20px;
+  border-width: 3px;
+}
+
+/* ============================================================
+   內容區
+   ============================================================ */
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+  margin: 0;
+  background: var(--bg);
+  border-top: 2px dashed #333;
+  border-bottom: 2px dashed #333;
+  resize: vertical;
+  position: relative;
+  touch-action: pan-y;
+}
+
+@media (min-width: 768px) {
+  .content-area {
+    max-width: 900px;
+    margin: 0 auto;
+    border-left: 2px dashed #333;
+    border-right: 2px dashed #333;
+    border-radius: 12px;
+  }
+}
+
+.content-area::after {
+  content: "⇕";
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font-size: 14px;
+  color: #666;
+  pointer-events: none;
+}
+
+body.a11y-mode .content-area::after { display: none; }
+
+/* ============================================================
+   字卡排版
+   ============================================================ */
+.sentence-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+.poem-head {
+  flex-shrink: 0;
+  margin-top: 28px;
+  margin-bottom: 40px;
+  font-size: 21px;
+  color: #90a0b8;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.poem-author {
+  font-size: 0.78em;
+  color: #5f6b7f;
+  margin-left: 8px;
+}
+
+.para-holder {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.a11y-mode .para-holder {
+  /* 預留錄音按鈕空間，避免文字被遮擋（由 positionFab 動態設定） */
+  padding-bottom: var(--fab-zone, 112px);
+}
+
+body.a11y-mode .poem-head {
+  margin-top: 36px;
+  margin-bottom: 48px;
+  font-size: 26px;
+  color: #00FFCC;
+}
+
+body.a11y-mode .poem-author {
+  color: #FFFFFF;
+}
+
+.para-wrap {
+  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0 4px;
+  line-height: var(--line-height);
+  padding: 16px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.sentence-active {
+  background: var(--highlight-bg);
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 0 14px var(--highlight-bg);
+}
+
+body.a11y-mode .sentence-active {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+ruby {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 10px;
+  padding: 4px 6px;
+  font-size: var(--base-font-size);
+  font-weight: bold;
+  color: var(--text);
+  word-break: keep-all;
+  white-space: nowrap;
+  flex-shrink: 0;
+  vertical-align: baseline;
+  line-height: 1.2;
+  transform-origin: center bottom;
+  transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+rt {
+  font-size: 0.48em;
+  color: var(--pinyin);
+  font-weight: normal;
+  line-height: 1.4;
+  white-space: nowrap;
+  min-height: 1em;
+}
+
+ruby rt { visibility: hidden; }
+ruby.show-pinyin rt,
+ruby:hover rt,
+ruby.reading-now rt,
+ruby.pressing rt { visibility: visible; }
+
+.punctuation {
+  font-size: var(--base-font-size);
+  font-weight: bold;
+  color: var(--text);
+  display: inline-block;
+  line-height: 1.2;
+  margin: 0 2px;
+  flex-shrink: 0;
+  vertical-align: baseline;
+  align-self: flex-end;
+  padding-bottom: 0.55em;
+}
+
+body.a11y-mode ruby.reading-now {
+  background: var(--highlight-bg);
+  color: var(--highlight-hanzi);
+  box-shadow: 0 0 12px rgba(255,255,0,0.6);
+  transform: scale(1.15);
+  z-index: 5;
+}
+
+body.a11y-mode ruby.reading-now rt {
+  color: var(--highlight-pinyin);
+  font-weight: bold;
+}
+
+body.a11y-mode ruby.pressing {
+  transform: scale(1.5);
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(255,255,0,0.9);
+  background: var(--highlight-bg);
+  color: var(--highlight-hanzi);
+}
+
+body.a11y-mode ruby.pressing rt {
+  color: var(--highlight-pinyin);
+  font-weight: bold;
+}
+
+/* ============================================================
+   底部控制列
+   ============================================================ */
+.control-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-top: 2px solid #222;
+  min-height: 64px;
+}
+
+body.a11y-mode .control-bar {
+  min-height: 140px;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.nav-btn, .sm-btn, .play-btn, .speed-btn {
+  min-width: var(--btn-min);
+  min-height: var(--btn-min);
+  padding: 6px;
+  font-size: 14px;
+  border: none;
+  border-radius: var(--btn-radius);
+  background: var(--btn-bg);
+  color: white;
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background 0.15s ease;
+}
+
+body.a11y-mode .nav-btn,
+body.a11y-mode .sm-btn,
+body.a11y-mode .play-btn,
+body.a11y-mode .speed-btn {
+  border: 3px solid #00FFCC;
+  font-size: 16px;
+}
+
+.nav-btn:hover, .sm-btn:hover, .play-btn:hover, .speed-btn:hover {
+  background: var(--btn-hover);
+}
+
+.nav-btn:focus-visible, .sm-btn:focus-visible,
+.play-btn:focus-visible, .speed-btn:focus-visible {
+  outline: 4px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.play-btn.playing { background: #00695c; }
+
+.icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.btn-text {
+  display: none;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+body.a11y-mode .btn-text { display: inline-block; }
+
+#speedVal {
+  font-size: 12px;
+  line-height: 1;
+  color: #00FFCC;
+  font-weight: bold;
+  min-width: 28px;
+  text-align: center;
+}
+
+body.a11y-mode #speedVal { font-size: 14px; }
+
+.voice-name {
+  font-size: 12px;
+  line-height: 1;
+  color: #00FFCC;
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
+}
+
+body.a11y-mode .voice-name { font-size: 16px; }
+
+/* ============================================================
+   浮動錄音按鈕
+   ============================================================ */
+.record-fab {
+  position: fixed;
+  left: 50%;
+  margin-left: calc(-1 * var(--fab-size) / 2);
+  bottom: var(--fab-bottom);
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: 50%;
+  border: 4px solid #FF6B6B;
+  background: #2a1a1a;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, opacity 0.15s ease;
+  touch-action: none;
+}
+
+.record-fab:hover {
+  background: #3a2020;
+}
+
+.record-fab:focus-visible {
+  outline: 4px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.record-fab.recording {
+  background: #b71c1c;
+  border-color: #FF0000;
+}
+
+.record-fab.playing-back {
+  background: #00695c;
+  border-color: #00FFCC;
+}
+
+.record-fab .fab-icon {
+  width: 42px;
+  height: 42px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============================================================
+   聲波動畫（播放錄音時狀態圖示）
+   ============================================================ */
+.wave-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 42px;
+}
+
+.wave-bar {
+  width: 4px;
+  height: 12px;
+  background: #FFFFFF;
+  border-radius: 2px;
+  animation: wave 1s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(1) { animation-delay: 0s; }
+.wave-bar:nth-child(2) { animation-delay: 0.15s; }
+.wave-bar:nth-child(3) { animation-delay: 0.3s; }
+.wave-bar:nth-child(4) { animation-delay: 0.45s; }
+.wave-bar:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes wave {
+  0%, 100% { height: 12px; opacity: 0.6; }
+  50% { height: 36px; opacity: 1; }
+}
+
+body.a11y-mode .wave-container { height: 54px; }
+body.a11y-mode .wave-bar { width: 5px; height: 14px; }
+
+@keyframes wave-a11y {
+  0%, 100% { height: 14px; opacity: 0.6; }
+  50% { height: 44px; opacity: 1; }
+}
+
+body.a11y-mode .wave-bar { animation-name: wave-a11y; }
+
+/* ============================================================
+   音量柱（錄音時即時音量，多色：綠→黃→紅）
+   ============================================================ */
+.volume-meter {
+  position: fixed;
+  left: calc(50% + var(--fab-size) / 2 + 16px);
+  bottom: calc(var(--fab-bottom) + 10px);
+  width: 16px;
+  height: calc(var(--fab-size) - 20px);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 3px;
+  border: 2px solid #4a4a58;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  z-index: 100;
+}
+
+.vol-seg {
+  flex: 1;
+  width: 100%;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.16);
+  transition: background 0.08s linear, box-shadow 0.08s linear;
+}
+
+.vol-seg:nth-child(-n+4) { --seg-color: #22c55e; }
+.vol-seg:nth-child(n+5):nth-child(-n+7) { --seg-color: #eab308; }
+.vol-seg:nth-child(n+8) { --seg-color: #ef4444; }
+
+.volume-meter.active .vol-seg { background: rgba(255,255,255,0.28); }
+
+.vol-seg.on {
+  background: var(--seg-color, #22c55e);
+  box-shadow: 0 0 6px var(--seg-color, #22c55e);
+}
+
+body.a11y-mode .volume-meter {
+  width: 20px;
+  left: calc(50% + var(--fab-size) / 2 + 18px);
+}
+
+body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
+</style>
+</head>
+<body>
+
+<div aria-live="polite" class="sr-only" id="a11y-status"></div>
+
+<header class="top-setting-bar">
+  <h1>詩詞朗讀｜朗讀練習</h1>
+
+  <button class="mode-btn" id="modeToggle" aria-pressed="false"
+          onclick="toggleA11yMode()">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+    <span id="modeBtnText">無障礙</span>
+  </button>
+</header>
+
+<!-- 作品選擇列 -->
+<div class="poem-selector" role="group" aria-label="選擇作品">
+  <button class="poem-btn" id="poemBtn0" onclick="selectPoem(0)" aria-pressed="false">水仙子・尋梅</button>
+  <button class="poem-btn" id="poemBtn1" onclick="selectPoem(1)" aria-pressed="false">春夜喜雨</button>
+</div>
+
+<main class="content-area" id="textContainer" role="region" aria-label="朗讀文字內容"></main>
+
+<nav class="control-bar" role="navigation" aria-label="朗讀控制">
+
+  <button class="nav-btn" id="prevBtn" onclick="prevSentence()" aria-label="上一句">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+    <span class="btn-text">上句</span>
+  </button>
+
+  <button class="play-btn" id="playBtn" onclick="togglePlayAudio()" aria-label="播放">
+    <svg class="icon" id="playIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <polygon points="6 3 20 12 6 21 6 3"/>
+    </svg>
+    <svg class="icon" id="pauseIcon" viewBox="0 0 24 24" aria-hidden="true" style="display:none;">
+      <rect x="6" y="4" width="4" height="16"/>
+      <rect x="14" y="4" width="4" height="16"/>
+    </svg>
+    <span class="btn-text">播放</span>
+  </button>
+
+  <button class="nav-btn" id="nextBtn" onclick="nextSentence()" aria-label="下一句">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m9 18 6-6-6-6"/>
+    </svg>
+    <span class="btn-text">下句</span>
+  </button>
+
+  <button class="speed-btn" id="speedBtn" onclick="cycleSpeed()" aria-label="調整速度">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m12 14 4-4"/>
+      <path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+    </svg>
+    <span id="speedVal">1.0</span>
+    <span class="btn-text">速度</span>
+  </button>
+
+  <button class="sm-btn" onclick="resetAll()" aria-label="重置">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </svg>
+    <span class="btn-text">重置</span>
+  </button>
+
+  <button class="sm-btn voice-btn" id="voiceBtn" onclick="cycleVoice()" aria-label="音色，目前 Male-A，點擊切換">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11 5 6 9H2v6h4l5 4V5Z"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    </svg>
+    <span class="voice-name" id="voiceVal">Male-A</span>
+    <span class="btn-text">音色</span>
+  </button>
+
+</nav>
+
+<!-- 浮動錄音按鈕（按住錄音，放開播放） -->
+<button class="record-fab" id="recordFab" aria-label="按住錄音，放開播放">
+  <svg class="fab-icon" id="fabMicIcon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    <line x1="12" x2="12" y1="19" y2="22"/>
+  </svg>
+
+  <div class="wave-container" id="fabWaveIcon" style="display:none;" aria-hidden="true">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
+</button>
+
+<!-- 音量柱（錄音時即時音量，多色：綠→黃→紅） -->
+<div class="volume-meter" id="volumeMeter" aria-hidden="true"></div>
+
+<script>
+// ============================================================
+// 兩首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫），共 16 段
+// pauseAfter：各句播完後的停頓秒數（取自作品文字檔的 <#X#> 標記）
+// ============================================================
+const POEMS = [
+  {
+    title: "水仙子・尋梅",
+    author: "喬吉",
+    audioDir: "./sound/水仙子-寻梅/",
+    pauseAfter: [0.7, 0.7, 1.0, 0.8, 1.0, 0.6, 0.6, 0],
+    sentences: [
+      {words:[{h:"冬",p:"dōng"},{h:"前",p:"qián"},{h:"冬",p:"dōng"},{h:"後",p:"hòu"},{h:"幾",p:"jǐ"},{h:"村",p:"cūn"},{h:"莊",p:"zhuāng"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"溪",p:"xī"},{h:"北",p:"běi"},{h:"溪",p:"xī"},{h:"南",p:"nán"},{h:"兩",p:"liǎng"},{h:"履",p:"lǚ"},{h:"霜",p:"shuāng"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"樹",p:"shù"},{h:"頭",p:"tóu"},{h:"樹",p:"shù"},{h:"底",p:"dǐ"},{h:"孤",p:"gū"},{h:"山",p:"shān"},{h:"上",p:"shàng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"冷",p:"lěng"},{h:"風",p:"fēng"},{h:"來",p:"lái"},{h:"何",p:"hé"},{h:"處",p:"chù"},{h:"香",p:"xiāng"},{h:"？",p:"",isPunc:true}]},
+      {words:[{h:"忽",p:"hū"},{h:"相",p:"xiāng"},{h:"逢",p:"féng"},{h:"縞",p:"gǎo"},{h:"袂",p:"mèi"},{h:"綃",p:"xiāo"},{h:"裳",p:"cháng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"酒",p:"jiǔ"},{h:"醒",p:"xǐng"},{h:"寒",p:"hán"},{h:"驚",p:"jīng"},{h:"夢",p:"mèng"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"笛",p:"dí"},{h:"淒",p:"qī"},{h:"春",p:"chūn"},{h:"斷",p:"duàn"},{h:"腸",p:"cháng"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"淡",p:"dàn"},{h:"月",p:"yuè"},{h:"昏",p:"hūn"},{h:"黃",p:"huáng"},{h:"。",p:"",isPunc:true}]}
+    ]
+  },
+  {
+    title: "春夜喜雨",
+    author: "杜甫",
+    audioDir: "./sound/春夜喜雨/",
+    hasRecite: true,   // 具備整首朗誦音檔（00-朗誦.mp3）
+    pauseAfter: [0.7, 0.8, 0.7, 1.0, 0.7, 0.8, 0.7, 0],
+    sentences: [
+      {words:[{h:"好",p:"hǎo"},{h:"雨",p:"yǔ"},{h:"知",p:"zhī"},{h:"時",p:"shí"},{h:"節",p:"jié"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"當",p:"dāng"},{h:"春",p:"chūn"},{h:"乃",p:"nǎi"},{h:"發",p:"fā"},{h:"生",p:"shēng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"隨",p:"suí"},{h:"風",p:"fēng"},{h:"潛",p:"qián"},{h:"入",p:"rù"},{h:"夜",p:"yè"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"潤",p:"rùn"},{h:"物",p:"wù"},{h:"細",p:"xì"},{h:"無",p:"wú"},{h:"聲",p:"shēng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"野",p:"yě"},{h:"徑",p:"jìng"},{h:"雲",p:"yún"},{h:"俱",p:"jù"},{h:"黑",p:"hēi"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"江",p:"jiāng"},{h:"船",p:"chuán"},{h:"火",p:"huǒ"},{h:"獨",p:"dú"},{h:"明",p:"míng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"曉",p:"xiǎo"},{h:"看",p:"kàn"},{h:"紅",p:"hóng"},{h:"濕",p:"shī"},{h:"處",p:"chù"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"花",p:"huā"},{h:"重",p:"zhòng"},{h:"錦",p:"jǐn"},{h:"官",p:"guān"},{h:"城",p:"chéng"},{h:"。",p:"",isPunc:true}]}
+    ]
+  }
+];
+
+// 攤平為單一 dataset（每個句子帶所屬詩篇與段內序號）
+const dataset = [];
+POEMS.forEach((poem) => {
+  poem.sentences.forEach((s, si) => {
+    dataset.push({
+      words: s.words,
+      poem: poem,
+      localIdx: si,
+      pauseAfterMs: Math.round((poem.pauseAfter[si] || 0) * 1000)
+    });
+  });
+});
+
+const INTER_SENTENCE_DELAY = 600;   // 無標記時預設停頓
+const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
+const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
+
+// 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗誦」為整首朗誦音檔）
+const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗誦'];
+let voiceIdx = 0;
+let currentVoice = VOICES[0];
+
+// 該詩是否具備整首朗誦音檔
+function poemHasRecite(poem) {
+  return poem.hasRecite === true;
+}
+
+// ============================================================
+// 全域狀態
+// ============================================================
+let currentSentIdx = 0;
+let speedRate = 1.0;
+let speedPresetIdx = 1;
+let wakeLock = null;
+let audio = null;
+let isPlaying = false;
+let a11yMode = localStorage.getItem('a11yMode') === 'true';
+
+// 操作後續播標記
+let resumeAfterAction = false;
+let resumeFromStart = false;
+
+// 字卡長按 / 滑動狀態
+let longPressTimer = null;
+let pressTarget = null;
+let wasPlayingBeforePress = false;
+let isPressing = false;
+const LONG_PRESS_MS = 350;
+
+// 滑動狀態
+let touchStartY = 0;
+let touchStartX = 0;
+let touchStartTime = 0;
+let touchMoved = false;
+const SWIPE_DISTANCE = 60;
+const SWIPE_TIME = 600;
+
+// ============================================================
+// 錄音狀態
+// ============================================================
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordedBlob = null;
+let recordedUrl = null;
+let recordState = 'idle';
+let recordAudioEl = null;
+let recordStream = null;
+
+// 音量分析（錄音時即時音量）
+let audioCtx = null;
+let analyser = null;
+let volRaf = null;
+
+// 錄音按鈕手勢狀態（按住錄音、放開播放）
+let mainPointerId = null;
+let pressActive = false;
+let playAfterStop = false;
+let discardAfterStop = false;
+
+const statusBox = document.getElementById('a11y-status');
+const playBtn = document.getElementById('playBtn');
+const playIcon = document.getElementById('playIcon');
+const pauseIcon = document.getElementById('pauseIcon');
+const modeBtn = document.getElementById('modeToggle');
+const modeBtnText = document.getElementById('modeBtnText');
+const container = document.getElementById('textContainer');
+
+const recordFab = document.getElementById('recordFab');
+const fabMicIcon = document.getElementById('fabMicIcon');
+const fabWaveIcon = document.getElementById('fabWaveIcon');
+
+const volumeMeter = document.getElementById('volumeMeter');
+let volSegs = [];
+
+function announce(msg) { statusBox.textContent = msg; }
+
+// ============================================================
+// 模式切換
+// ============================================================
+function applyMode() {
+  document.body.classList.toggle('a11y-mode', a11yMode);
+  modeBtn.setAttribute('aria-pressed', a11yMode ? 'true' : 'false');
+  modeBtnText.textContent = a11yMode ? '一般模式' : '無障礙';
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+  positionFab();
+}
+
+function toggleA11yMode() {
+  a11yMode = !a11yMode;
+  localStorage.setItem('a11yMode', a11yMode);
+  applyMode();
+  announce(a11yMode ? '已切換為無障礙模式' : '已切換為一般模式');
+}
+
+// ============================================================
+// 音檔路徑（依所屬詩篇資料夾 + 段內序號）
+// ============================================================
+function getAudioFilename(localIdx, voice) {
+  // 「朗誦」為整首音檔，不分句
+  if (voice === '朗誦') return '00-朗誦.mp3';
+  const numStr = String(localIdx + 1).padStart(2, '0');
+  return `${numStr}-${voice}.mp3`;
+}
+
+// ============================================================
+// 作品選擇
+// ============================================================
+function updatePoemButtons() {
+  const curPoem = dataset[currentSentIdx].poem;
+  POEMS.forEach((poem, i) => {
+    const btn = document.getElementById('poemBtn' + i);
+    const active = poem === curPoem;
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.classList.toggle('active', active);
+  });
+}
+
+function selectPoem(poemIdx) {
+  const poem = POEMS[poemIdx];
+  if (!poem || dataset[currentSentIdx].poem === poem) return;
+
+  stopAudio();
+  stopRecordPlayback();
+  resumeAfterAction = false;
+  resumeFromStart = false;
+
+  currentSentIdx = dataset.findIndex(s => s.poem === poem);
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+  // 切換後若所選詩沒有「朗誦」音檔，自動跳回第一個音色
+  if (sanitizeVoice()) {
+    announce(`已切換至《${poem.title}》，此作品沒有朗誦音檔，已切回 ${currentVoice}`);
+  } else {
+    announce(`已切換至《${poem.title}》`);
+  }
+}
+
+// ============================================================
+// 音色循環切換（大按鈕）
+// ============================================================
+function updateVoiceLabel() {
+  document.getElementById('voiceVal').textContent = currentVoice;
+  document.getElementById('voiceBtn').setAttribute('aria-label',
+    `音色，目前 ${currentVoice}，點擊切換`);
+}
+
+function cycleVoice() {
+  pauseForAction(true);
+  stopAudio();
+  const poem = dataset[currentSentIdx].poem;
+  let next = voiceIdx;
+  // 當前詩沒有朗誦音檔時，循環跳過「朗誦」
+  for (let i = 0; i < VOICES.length; i++) {
+    next = (next + 1) % VOICES.length;
+    if (VOICES[next] !== '朗誦' || poemHasRecite(poem)) break;
+  }
+  voiceIdx = next;
+  currentVoice = VOICES[voiceIdx];
+  updateVoiceLabel();
+  if (resumeAfterAction) {
+    resumeAfterAction = false;
+    resumeFromStart = false;
+    setTimeout(() => { togglePlayAudio(); }, 100);
+  }
+  announce(`已切換音色為 ${currentVoice}`);
+}
+
+// 目前詩沒有「朗誦」音檔時，把音色重置回第一個；回傳是否已變更
+function sanitizeVoice() {
+  const poem = dataset[currentSentIdx].poem;
+  if (currentVoice === '朗誦' && !poemHasRecite(poem)) {
+    voiceIdx = 0;
+    currentVoice = VOICES[0];
+    updateVoiceLabel();
+    return true;
+  }
+  return false;
+}
+
+// ============================================================
+// 錄音按鈕定位（依控制列實際高度自動調整，避免重疊）
+// ============================================================
+function positionFab() {
+  const cb = document.querySelector('.control-bar');
+  const cbTop = cb.getBoundingClientRect().top;
+  const fabH = recordFab.offsetHeight;
+  const fabBottom = (window.innerHeight - cbTop) + 14;
+  document.documentElement.style.setProperty('--fab-bottom', fabBottom + 'px');
+  document.documentElement.style.setProperty('--fab-zone', (fabH + 24) + 'px');
+}
+
+// ============================================================
+// 渲染
+// ============================================================
+function renderSentence() {
+  const sent = dataset[currentSentIdx];
+  const p = sent.poem;
+  let html = `<div class="sentence-stage">`;
+  html += `<div class="poem-head">${p.title}<span class="poem-author">　${p.author}</span></div>`;
+  html += `<div class="para-holder"><div class="para-wrap sentence-active">`;
+  sent.words.forEach((word) => {
+    if (word.isPunc) {
+      html += `<span class="punctuation">${word.h}</span>`;
+    } else {
+      html += `<ruby>${word.h}<rt>${word.p}</rt></ruby>`;
+    }
+  });
+  html += `</div></div>`;
+  html += `</div>`;
+  container.innerHTML = html;
+
+  document.getElementById('prevBtn').disabled = (currentSentIdx === 0);
+  document.getElementById('nextBtn').disabled = (currentSentIdx === dataset.length - 1);
+
+  bindRubyEvents();
+  clearAllHighlight();
+  updatePoemButtons();
+}
+
+// ============================================================
+// 字卡事件
+// ============================================================
+function bindRubyEvents() {
+  document.querySelectorAll('ruby').forEach(r => {
+    r.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (touchMoved) return;
+      r.classList.toggle('show-pinyin');
+    });
+
+    r.addEventListener('mouseenter', () => {
+      if (a11yMode) r.classList.add('reading-now');
+    });
+    r.addEventListener('mouseleave', () => {
+      if (a11yMode && !isPressing) r.classList.remove('reading-now');
+    });
+
+    r.addEventListener('mousedown', (e) => {
+      if (!a11yMode) return;
+      if (e.button !== 0) return;
+      startLongPress(r);
+    });
+    r.addEventListener('mouseup', () => { endLongPress(); });
+
+    r.addEventListener('touchstart', (e) => {
+      if (!a11yMode) return;
+      startLongPress(r);
+    }, { passive: true });
+    r.addEventListener('touchend', () => { endLongPress(); }, { passive: true });
+    r.addEventListener('touchcancel', () => { endLongPress(); }, { passive: true });
+  });
+}
+
+// ============================================================
+// 字卡長按邏輯（從當前時間點續播）
+// ============================================================
+function startLongPress(r) {
+  if (isPressing) return;
+  pressTarget = r;
+  longPressTimer = setTimeout(() => {
+    isPressing = true;
+    wasPlayingBeforePress = isPlaying;
+    pauseAudio();
+    r.classList.add('pressing', 'reading-now');
+    if (navigator.vibrate) navigator.vibrate(30);
+  }, LONG_PRESS_MS);
+}
+
+function endLongPress() {
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+  pressTarget = null;
+
+  if (isPressing) {
+    isPressing = false;
+    document.querySelectorAll('ruby.pressing').forEach(r => {
+      r.classList.remove('pressing');
+    });
+    if (wasPlayingBeforePress) resumeAudio();
+    wasPlayingBeforePress = false;
+  }
+}
+
+// ============================================================
+// 操作後續播輔助
+// ============================================================
+function pauseForAction(fromStart = true) {
+  if (isPlaying) {
+    resumeAfterAction = true;
+    resumeFromStart = fromStart;
+    pauseAudio();
+  } else {
+    resumeAfterAction = false;
+    resumeFromStart = false;
+  }
+}
+
+function resumeAfterActionIfNeeded() {
+  if (!resumeAfterAction) return;
+  resumeAfterAction = false;
+  if (audio && resumeFromStart) audio.currentTime = 0;
+  resumeFromStart = false;
+  resumeAudio();
+}
+
+// ============================================================
+// 播放 / 暫停 / 恢復
+// ============================================================
+function updatePlayIcon() {
+  if (isPlaying) {
+    playIcon.style.display = 'none';
+    pauseIcon.style.display = '';
+    playBtn.setAttribute('aria-label', '暫停');
+  } else {
+    playIcon.style.display = '';
+    pauseIcon.style.display = 'none';
+    playBtn.setAttribute('aria-label', '播放');
+  }
+}
+
+function pauseAudio() {
+  if (audio && isPlaying) {
+    audio.pause();
+    isPlaying = false;
+    playBtn.classList.remove('playing');
+    updatePlayIcon();
+  }
+}
+
+function resumeAudio() {
+  if (audio && !isPlaying) {
+    audio.play().then(() => {
+      isPlaying = true;
+      playBtn.classList.add('playing');
+      updatePlayIcon();
+    }).catch(() => announce('恢復播放失敗'));
+  }
+}
+
+function stopAudio() {
+  if (audio) {
+    audio.pause();
+    audio.onended = null;
+    audio.onerror = null;
+    audio = null;
+  }
+  isPlaying = false;
+  playBtn.classList.remove('playing');
+  updatePlayIcon();
+  clearAllHighlight();
+}
+
+function createAudioForCurrentSentence() {
+  const sent = dataset[currentSentIdx];
+  const fname = getAudioFilename(sent.localIdx, currentVoice);
+  const fullPath = sent.poem.audioDir + fname;
+
+  if (audio) {
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio = null;
+  }
+
+  audio = new Audio(fullPath);
+  audio.playbackRate = speedRate;
+  return audio;
+}
+
+function playNextInSequence() {
+  const finishedSent = dataset[currentSentIdx];
+
+  // 所屬詩篇播放完畢：自動停止，不續播下一篇
+  if (finishedSent.localIdx === finishedSent.poem.sentences.length - 1) {
+    isPlaying = false;
+    playBtn.classList.remove('playing');
+    updatePlayIcon();
+    announce(`《${finishedSent.poem.title}》播放完畢`);
+    return;
+  }
+
+  if (currentSentIdx >= dataset.length - 1) {
+    isPlaying = false;
+    playBtn.classList.remove('playing');
+    updatePlayIcon();
+    announce('全部段落播放完畢');
+    return;
+  }
+
+  const finishedIdx = currentSentIdx;
+  currentSentIdx++;
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+
+  // 依作品文字檔的停頓標記決定下一句前等待時間
+  const sent = dataset[finishedIdx];
+  let delay = sent.pauseAfterMs;
+  if (delay <= 0) {
+    delay = (finishedIdx < dataset.length - 1) ? POEM_BOUNDARY_DELAY : INTER_SENTENCE_DELAY;
+  }
+
+  setTimeout(() => {
+    if (!isPlaying) return;
+
+    createAudioForCurrentSentence();
+    audio.onended = () => { playNextInSequence(); };
+    audio.onerror = () => {
+      announce(`音檔載入失敗`);
+      isPlaying = false;
+      playBtn.classList.remove('playing');
+      updatePlayIcon();
+    };
+
+    audio.play().then(() => {
+      announce(`播放第 ${currentSentIdx + 1} 段 ${currentVoice}`);
+    }).catch(() => {
+      announce('播放失敗');
+      isPlaying = false;
+      playBtn.classList.remove('playing');
+      updatePlayIcon();
+    });
+  }, delay);
+}
+
+function togglePlayAudio() {
+  if (isPlaying) {
+    stopAudio();
+    announce('暫停播放');
+    return;
+  }
+
+  stopAudio();
+
+  // 「朗誦」音色：播放整首朗誦音檔（不分句連續播放）
+  if (currentVoice === '朗誦') {
+    if (!poemHasRecite(dataset[currentSentIdx].poem)) {
+      announce('此作品沒有朗誦音檔');
+      return;
+    }
+    startRecitePlayback();
+    return;
+  }
+
+  createAudioForCurrentSentence();
+
+  audio.onended = () => { playNextInSequence(); };
+  audio.onerror = () => {
+    announce(`音檔載入失敗`);
+    stopAudio();
+  };
+
+  audio.play().then(() => {
+    isPlaying = true;
+    playBtn.classList.add('playing');
+    updatePlayIcon();
+    announce(`播放第 ${currentSentIdx + 1} 段 ${currentVoice}`);
+  }).catch(() => {
+    announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
+  });
+}
+
+// 整首朗誦播放（音檔：00-朗誦.mp3；由「朗誦」音色觸發）
+function startRecitePlayback() {
+  const sent = dataset[currentSentIdx];
+  const fullPath = sent.poem.audioDir + getAudioFilename(sent.localIdx, currentVoice);
+
+  audio = new Audio(fullPath);
+  audio.playbackRate = speedRate;
+  audio.onended = () => {
+    isPlaying = false;
+    playBtn.classList.remove('playing');
+    updatePlayIcon();
+    announce(`《${sent.poem.title}》朗誦播放完畢`);
+  };
+  audio.onerror = () => {
+    announce('朗誦音檔載入失敗');
+    stopAudio();
+  };
+
+  audio.play().then(() => {
+    isPlaying = true;
+    playBtn.classList.add('playing');
+    updatePlayIcon();
+    announce(`播放《${sent.poem.title}》朗誦`);
+  }).catch(() => {
+    announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
+  });
+}
+
+// ============================================================
+// 清除高亮
+// ============================================================
+function clearAllHighlight() {
+  document.querySelectorAll('ruby.reading-now').forEach(r => {
+    r.classList.remove('reading-now');
+  });
+}
+
+// ============================================================
+// 字體自適應
+// ============================================================
+function fitFontSize() {
+  const words = dataset[currentSentIdx].words.length;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  if (w === 0 || h === 0) return;
+
+  let size = 72;
+  while (size > 20) {
+    const charW = size * 1.2;
+    const charsPerLine = Math.max(1, Math.floor(w / charW));
+    const lines = Math.ceil(words / charsPerLine);
+    const totalH = lines * size * 2.6;
+    // 預留頂部固定標題與底部錄音按鈕的空間（無障礙模式），避免遮擋
+    let budget = h * 0.9 - 100;
+    if (a11yMode) {
+      const zone = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fab-zone')) || 112;
+      budget -= zone;
+    }
+    if (totalH <= Math.max(80, budget)) break;
+    size -= 2;
+  }
+  document.documentElement.style.setProperty('--base-font-size', size + 'px');
+}
+
+if (window.ResizeObserver) {
+  new ResizeObserver(() => fitFontSize()).observe(container);
+}
+window.addEventListener('resize', fitFontSize);
+window.addEventListener('resize', positionFab);
+
+// ============================================================
+// 滑動手勢
+// ============================================================
+container.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) return;
+  touchStartY = e.touches[0].clientY;
+  touchStartX = e.touches[0].clientX;
+  touchStartTime = Date.now();
+  touchMoved = false;
+}, { passive: true });
+
+container.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 1) return;
+  const dy = Math.abs(e.touches[0].clientY - touchStartY);
+  const dx = Math.abs(e.touches[0].clientX - touchStartX);
+  if (dy > 10 || dx > 10) {
+    touchMoved = true;
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}, { passive: true });
+
+container.addEventListener('touchend', (e) => {
+  const dt = Date.now() - touchStartTime;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+
+  if (Math.abs(dy) > SWIPE_DISTANCE &&
+      Math.abs(dx) < Math.abs(dy) * 0.5 &&
+      dt < SWIPE_TIME) {
+    if (dy < 0) nextSentence();
+    else prevSentence();
+    touchMoved = true;
+  }
+
+  setTimeout(() => { touchMoved = false; }, 100);
+}, { passive: true });
+
+// ============================================================
+// 全域放開保險
+// ============================================================
+document.addEventListener('mouseup', () => { if (isPressing) endLongPress(); });
+document.addEventListener('touchend', () => { if (isPressing) endLongPress(); });
+document.addEventListener('touchcancel', () => { if (isPressing) endLongPress(); });
+
+// ============================================================
+// 句子切換
+// ============================================================
+function prevSentence() {
+  stopAudio();
+  resumeAfterAction = false;
+  resumeFromStart = false;
+  if (currentSentIdx <= 0) { announce('已經是第一句'); return; }
+  currentSentIdx--;
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+  announce(`切換到第 ${currentSentIdx + 1} 句`);
+}
+
+function nextSentence() {
+  stopAudio();
+  resumeAfterAction = false;
+  resumeFromStart = false;
+  if (currentSentIdx >= dataset.length - 1) { announce('已經是最後一句'); return; }
+  currentSentIdx++;
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+  announce(`切換到第 ${currentSentIdx + 1} 句`);
+}
+
+// ============================================================
+// 速度循環
+// ============================================================
+function cycleSpeed() {
+  pauseForAction(true);
+  speedPresetIdx = (speedPresetIdx + 1) % SPEED_PRESETS.length;
+  speedRate = SPEED_PRESETS[speedPresetIdx];
+  document.getElementById('speedVal').textContent = speedRate.toFixed(1);
+  if (audio) audio.playbackRate = speedRate;
+  setTimeout(() => { resumeAfterActionIfNeeded(); }, 100);
+  announce(`播放速度 ${speedRate.toFixed(1)} 倍`);
+}
+
+// ============================================================
+// 重置
+// ============================================================
+function resetAll() {
+  stopAudio();
+  stopRecordPlayback();
+  resumeAfterAction = false;
+  resumeFromStart = false;
+  currentSentIdx = 0;
+  speedPresetIdx = 1;
+  speedRate = 1.0;
+  document.getElementById('speedVal').textContent = '1.0';
+  renderSentence();
+  requestAnimationFrame(fitFontSize);
+  sanitizeVoice();
+  announce('已重置，回到第一句');
+}
+
+// ============================================================
+// 錄音功能
+// ============================================================
+function updateRecordFabUI() {
+  recordFab.classList.remove('recording', 'playing-back');
+
+  if (recordState === 'recording') {
+    // 錄音中：保留麥克風圖示，音量即時由右側音量柱呈現
+    fabMicIcon.style.display = '';
+    fabWaveIcon.style.display = 'none';
+    recordFab.classList.add('recording');
+    recordFab.setAttribute('aria-label', '錄音中，放開按鈕播放');
+  } else if (recordState === 'playingBack') {
+    // 播放錄音中：顯示聲波動畫
+    fabMicIcon.style.display = 'none';
+    fabWaveIcon.style.display = '';
+    recordFab.classList.add('playing-back');
+    recordFab.setAttribute('aria-label', '播放錄音中');
+  } else {
+    fabMicIcon.style.display = '';
+    fabWaveIcon.style.display = 'none';
+    recordFab.setAttribute('aria-label', '按住錄音，放開播放');
+  }
+}
+
+async function startPressRecording() {
+  pressActive = true;
+
+  // 錄音前先停止朗讀與舊錄音播放
+  if (isPlaying) stopAudio();
+  stopRecordPlayback();
+
+  // 開始新錄音前，自動刪除舊錄音檔
+  if (recordedUrl) {
+    URL.revokeObjectURL(recordedUrl);
+    recordedUrl = null;
+    recordedBlob = null;
+  }
+
+  recordState = 'recording';
+  updateRecordFabUI();
+
+  try {
+    const hasLiveStream = recordStream &&
+                          recordStream.getAudioTracks().some(t => t.readyState === 'live');
+
+    if (!hasLiveStream) {
+      recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    // 等待麥克風權限期間已放開按鈕 → 取消本次錄音
+    if (!pressActive) {
+      recordState = 'idle';
+      updateRecordFabUI();
+      return;
+    }
+
+    ensureAnalyser();
+    startVolumeMeter();
+
+    let mimeType = '';
+    if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+    else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+    else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
+
+    const options = mimeType ? { mimeType } : {};
+    mediaRecorder = new MediaRecorder(recordStream, options);
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      if (discardAfterStop) {
+        discardAfterStop = false;
+        recordState = 'idle';
+        updateRecordFabUI();
+        return;
+      }
+      recordedBlob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+      recordedUrl = URL.createObjectURL(recordedBlob);
+      recordState = 'hasRecording';
+      updateRecordFabUI();
+      if (playAfterStop) {
+        playAfterStop = false;
+        playRecording();
+      }
+    };
+
+    mediaRecorder.start();
+    announce('開始錄音，放開按鈕播放');
+  } catch (err) {
+    console.error(err);
+    recordState = 'idle';
+    stopVolumeMeter();
+    updateRecordFabUI();
+    announce('無法存取麥克風，請確認已允許麥克風權限');
+  }
+}
+
+function finishPressRecording() {
+  playAfterStop = false;
+  pressActive = false;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    playAfterStop = true;
+    mediaRecorder.stop();
+  } else {
+    recordState = 'idle';
+    updateRecordFabUI();
+  }
+  stopVolumeMeter();
+}
+
+// ============================================================
+// 音量柱（錄音時即時音量，多色：綠→黃→紅）
+// ============================================================
+function ensureAnalyser() {
+  if (analyser) return analyser;
+  if (!recordStream) return null;
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const src = audioCtx.createMediaStreamSource(recordStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.6;
+    src.connect(analyser);
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+  return analyser;
+}
+
+function buildVolumeMeter() {
+  volumeMeter.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'vol-seg';
+    volumeMeter.appendChild(seg);
+  }
+  volSegs = volumeMeter.querySelectorAll('.vol-seg');
+}
+
+function setVolumeLevel(level) {
+  const lit = Math.round(level * 10);
+  volSegs.forEach((seg, i) => seg.classList.toggle('on', i < lit));
+}
+
+function startVolumeMeter() {
+  if (!ensureAnalyser()) return;
+  volumeMeter.classList.add('active');
+  const data = new Uint8Array(analyser.fftSize);
+  const loop = () => {
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = (data[i] - 128) / 128;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / data.length);
+    const level = Math.max(0, Math.min(1, rms * 3.5));
+    setVolumeLevel(level < 0.03 ? 0 : level);
+    volRaf = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+function stopVolumeMeter() {
+  volumeMeter.classList.remove('active');
+  if (volRaf) {
+    cancelAnimationFrame(volRaf);
+    volRaf = null;
+  }
+  setVolumeLevel(0);
+}
+
+function playRecording() {
+  if (!recordedUrl) {
+    announce('沒有錄音可播放');
+    recordState = 'idle';
+    updateRecordFabUI();
+    return;
+  }
+
+  recordAudioEl = new Audio(recordedUrl);
+  recordAudioEl.onended = () => {
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  };
+  recordAudioEl.onerror = () => {
+    announce('播放錄音失敗');
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  };
+  recordAudioEl.play().then(() => {
+    recordState = 'playingBack';
+    updateRecordFabUI();
+    announce('播放您的錄音');
+  }).catch(() => {
+    announce('播放失敗');
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  });
+}
+
+function stopRecordPlayback() {
+  if (recordAudioEl) {
+    recordAudioEl.pause();
+    recordAudioEl.onended = null;
+    recordAudioEl.onerror = null;
+    recordAudioEl = null;
+  }
+  if (recordState === 'playingBack') {
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  }
+}
+
+// ============================================================
+// 錄音按鈕手勢（按住錄音、放開播放；新錄音自動覆蓋舊錄音）
+// ============================================================
+recordFab.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  mainPointerId = e.pointerId;
+  recordFab.setPointerCapture(e.pointerId);
+  startPressRecording();
+});
+
+recordFab.addEventListener('pointerup', (e) => {
+  if (e.pointerId !== mainPointerId) return;
+  e.preventDefault();
+  mainPointerId = null;
+  finishPressRecording();
+});
+
+recordFab.addEventListener('pointercancel', () => {
+  mainPointerId = null;
+  pressActive = false;
+  playAfterStop = false;
+  discardAfterStop = true;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  } else {
+    recordState = 'idle';
+    updateRecordFabUI();
+  }
+  stopVolumeMeter();
+});
+
+// ============================================================
+// 頁面關閉時釋放麥克風串流
+// ============================================================
+window.addEventListener('beforeunload', () => {
+  if (recordStream) {
+    recordStream.getTracks().forEach(t => t.stop());
+    recordStream = null;
+  }
+});
+
+// ============================================================
+// 事件監聽
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'BUTTON' && e.key === ' ') return;
+
+  switch (e.key) {
+    case 'ArrowLeft': e.preventDefault(); prevSentence(); break;
+    case 'ArrowRight': e.preventDefault(); nextSentence(); break;
+    case ' ':
+      e.preventDefault();
+      togglePlayAudio();
+      break;
+    case 'Escape':
+      e.preventDefault();
+      resetAll();
+      break;
+  }
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('ruby.show-pinyin').forEach(r => {
+    r.classList.remove('show-pinyin');
+  });
+});
+
+// ============================================================
+// 初始化
+// ============================================================
+applyMode();
+renderSentence();
+updatePlayIcon();
+updateVoiceLabel();
+buildVolumeMeter();
+updateRecordFabUI();
+positionFab();
+requestAnimationFrame(() => {
+  fitFontSize();
+  positionFab();
+  setTimeout(fitFontSize, 100);
+});
+</script>
+</body>
+</html>
