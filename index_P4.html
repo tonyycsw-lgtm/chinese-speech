@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>聽雪｜朗讀練習（無障礙版）</title>
 
 <link rel="manifest" href="./manifest.json" />
@@ -72,9 +72,10 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: auto;
+  overflow-y: auto;
   padding: 0;
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--bg);
@@ -207,14 +208,15 @@ body.a11y-mode .poem-btn {
    ============================================================ */
 .content-area {
   flex: 1;
+  /* 保障文字窗口高度：使文檔總高 = 視口 + 頂欄 + 作品列，向上滑動時頂欄滾出、文字窗口從頂部開始 */
+  min-height: var(--content-min-h, 480px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   width: 100%;
   max-width: 100%;
-  min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 20px;
   /* 底部預留錄音按鈕的完整佔用帶（positionFab 動態設定 --fab-zone），避免手機豎屏遮住詩句／標題 */
   padding-bottom: calc(var(--fab-zone, 140px) + 12px);
@@ -224,7 +226,7 @@ body.a11y-mode .poem-btn {
   border-bottom: 2px dashed #333;
   resize: vertical;
   position: relative;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 @media (min-width: 768px) {
@@ -284,8 +286,9 @@ body.a11y-mode .content-area::after { display: none; }
   min-height: 0;
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* 詩句用 margin:auto 居中：空間不足（矮視口多行詩句）時自動頂部對齊，絕不向上壓住標題 */
 }
 
 body.a11y-mode .para-holder {
@@ -315,6 +318,7 @@ body.a11y-mode .poem-author {
   padding: 16px;
   max-width: 100%;
   width: 100%;
+  margin: auto;
 }
 
 .sentence-active {
@@ -334,7 +338,8 @@ ruby {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 10px;
+  /* 字卡間距收窄，讓長句在窄屏少折行、完整顯示在錄音鈕上方 */
+  margin: 0 4px;
   padding: 4px 6px;
   font-size: var(--base-font-size);
   font-weight: bold;
@@ -410,6 +415,9 @@ body.a11y-mode ruby.pressing rt {
    底部控制列
    ============================================================ */
 .control-bar {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom, 0);
+  z-index: 90;
   flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
@@ -752,8 +760,8 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 
 <script>
 // ============================================================
-// 《聽雪》（金波）14 段
-// pauseAfter：本作品無停頓標記，句間使用預設停頓
+// 兩首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫），共 16 段
+// pauseAfter：各句播完後的停頓秒數（取自作品文字檔的 <#X#> 標記）
 // ============================================================
 const POEMS = [
   {
@@ -788,7 +796,7 @@ POEMS.forEach((poem) => {
       words: s.words,
       poem: poem,
       localIdx: si,
-      pauseAfterMs: Math.round((poem.pauseAfter ? (poem.pauseAfter[si] || 0) : 0) * 1000)
+      pauseAfterMs: Math.round(((poem.pauseAfter ? poem.pauseAfter[si] : 0) || 0) * 1000)
     });
   });
 });
@@ -990,6 +998,11 @@ function positionFab() {
   const fabBottom = (window.innerHeight - cbTop) + 14;
   document.documentElement.style.setProperty('--fab-bottom', fabBottom + 'px');
   document.documentElement.style.setProperty('--fab-zone', (fabBottom + fabH + 24) + 'px');
+  // 文字窗口最小高度：詩句＋標題＋錄音鈕帶完整（詩句長時可滾動完整查看）
+  const pw = document.querySelector('.para-wrap');
+  const ph = document.querySelector('.poem-head');
+  const need = (ph ? ph.offsetHeight + 40 : 0) + (pw ? pw.offsetHeight : 0) + 20 + (fabBottom + fabH + 24);
+  document.documentElement.style.setProperty('--content-min-h', Math.max(window.innerHeight - cb.offsetHeight, need) + 'px');
 }
 
 // ============================================================
