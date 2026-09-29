@@ -216,6 +216,8 @@ body.a11y-mode .poem-btn {
   min-height: 0;
   overflow: auto;
   padding: 20px;
+  /* 底部預留錄音按鈕的完整佔用帶（positionFab 動態設定 --fab-zone），避免手機豎屏遮住詩句／標題 */
+  padding-bottom: calc(var(--fab-zone, 140px) + 12px);
   margin: 0;
   background: var(--bg);
   border-top: 2px dashed #333;
@@ -287,8 +289,8 @@ body.a11y-mode .content-area::after { display: none; }
 }
 
 body.a11y-mode .para-holder {
-  /* 預留錄音按鈕空間，避免文字被遮擋（由 positionFab 動態設定） */
-  padding-bottom: var(--fab-zone, 112px);
+  /* 讓位改由 .content-area 的 --fab-zone 預留統一處理 */
+  padding-bottom: 0;
 }
 
 body.a11y-mode .poem-head {
@@ -999,7 +1001,7 @@ function positionFab() {
   const fabH = recordFab.offsetHeight;
   const fabBottom = (window.innerHeight - cbTop) + 14;
   document.documentElement.style.setProperty('--fab-bottom', fabBottom + 'px');
-  document.documentElement.style.setProperty('--fab-zone', (fabH + 24) + 'px');
+  document.documentElement.style.setProperty('--fab-zone', (fabBottom + fabH + 24) + 'px');
 }
 
 // ============================================================
