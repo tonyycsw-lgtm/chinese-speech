@@ -122,6 +122,16 @@ body.a11y-mode .top-setting-bar {
   white-space: nowrap;
 }
 
+.offline-status {
+  font-size: 12px;
+  color: #00FFCC;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+body.a11y-mode .offline-status { font-size: 14px; }
+
+
 .mode-btn {
   min-width: var(--btn-min);
   min-height: var(--btn-min);
@@ -662,6 +672,8 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 
 <header class="top-setting-bar">
   <h1>詩詞朗讀｜朗讀練習</h1>
+
+  <span class="offline-status" id="offlineStatus" role="status"></span>
 
   <button class="mode-btn" id="modeToggle" aria-pressed="false"
           onclick="toggleA11yMode()">
@@ -1770,6 +1782,49 @@ requestAnimationFrame(() => {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+// ===== 離線預載：後台下載全部音檔（總量約 5 MB），完成後可離線使用 =====
+const offlineStatus = document.getElementById('offlineStatus');
+async function preloadAllAudio() {
+  if (!offlineStatus || !navigator.serviceWorker) return;
+  const urls = [];
+  POEMS.forEach((poem) => {
+    const dir = new URL(poem.audioDir, location.href).href;
+    if (poem.hasRecite) urls.push(dir + '00-朗誦.mp3');
+    const n = poem.sentences.length;
+    ['Male-A', 'Male-B', 'Female-A'].forEach((v) => {
+      for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-' + v + '.mp3');
+    });
+  });
+  const list = [...new Set(urls)];
+  if (!list.length) return;
+  let done = 0;
+  const render = () => { offlineStatus.textContent = '離線 ' + done + '/' + list.length; };
+  render();
+  const BATCH = 6;
+  for (let i = 0; i < list.length; i += BATCH) {
+    const chunk = list.slice(i, i + BATCH);
+    await Promise.all(chunk.map((u) => fetch(u, { cache: 'no-cache' }).then((r) => r.ok).catch(() => false)));
+    done = Math.min(list.length, done + chunk.length);
+    render();
+  }
+  offlineStatus.textContent = '已下載・可離線';
+  try { announce('已下載全部音檔，可以離線使用'); } catch (e) {}
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(async () => {
+    // 首次訪問 SW 尚未接管頁面：等待接管後預載才會寫入快取
+    if (!navigator.serviceWorker.controller) {
+      await new Promise((res) => {
+        navigator.serviceWorker.addEventListener('controllerchange', res, { once: true });
+        setTimeout(res, 10000);
+      });
+    }
+    setTimeout(preloadAllAudio, 300);
+  }).catch(() => {});
+} else if (offlineStatus) {
+  offlineStatus.style.display = 'none';
+}
+
 }
 </script>
 </body>
