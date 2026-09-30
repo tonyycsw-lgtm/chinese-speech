@@ -33,7 +33,7 @@
 
   /* 錄音按鈕位置（水平置中） */
   --fab-bottom: calc(90px + env(safe-area-inset-bottom));
-  --fab-size: 72px;
+  --fab-size: 54px;
 }
 
 /* ============================================================
@@ -166,7 +166,7 @@ select {
 }
 
 .poem-btn {
-  min-width: 150px;
+  min-width: 52px;
   min-height: 56px;
   padding: 8px 18px;
   font-size: 18px;
@@ -197,7 +197,7 @@ body.a11y-mode .poem-selector {
 }
 
 body.a11y-mode .poem-btn {
-  min-width: 200px;
+  min-width: 72px;
   min-height: 64px;
   font-size: 20px;
   border-width: 3px;
@@ -218,8 +218,8 @@ body.a11y-mode .poem-btn {
   max-width: 100%;
   overflow: visible;
   padding: 20px;
-  /* 底部預留錄音按鈕的完整佔用帶（positionFab 動態設定 --fab-zone），避免手機豎屏遮住詩句／標題 */
-  padding-bottom: calc(var(--fab-zone, 140px) + 12px);
+  /* 錄音鈕已移入底部控制列，文字窗不再預留懸浮帶，空間全部給詩句 */
+  padding-bottom: 24px;
   margin: 0;
   background: var(--bg);
   border-top: 2px dashed #333;
@@ -295,6 +295,8 @@ body.a11y-mode .para-holder {
   /* 讓位改由 .content-area 的 --fab-zone 預留統一處理 */
   padding-bottom: 0;
 }
+
+
 
 body.a11y-mode .poem-head {
   margin-top: 36px;
@@ -424,7 +426,7 @@ body.a11y-mode ruby.pressing rt {
   gap: 8px;
   justify-content: center;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 10px;
   background: var(--bg);
   border-top: 2px solid #222;
   min-height: 64px;
@@ -432,8 +434,8 @@ body.a11y-mode ruby.pressing rt {
 
 body.a11y-mode .control-bar {
   min-height: 140px;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 10px;
 }
 
 .nav-btn, .sm-btn, .play-btn, .speed-btn {
@@ -522,10 +524,8 @@ body.a11y-mode .voice-name { font-size: 16px; }
    浮動錄音按鈕
    ============================================================ */
 .record-fab {
-  position: fixed;
-  left: 50%;
-  margin-left: calc(-1 * var(--fab-size) / 2);
-  bottom: var(--fab-bottom);
+  /* 位於底部控制列內、音色按鈕右邊（不再懸浮，不遮文字） */
+  position: static;
   width: var(--fab-size);
   height: var(--fab-size);
   border-radius: 50%;
@@ -537,7 +537,7 @@ body.a11y-mode .voice-name { font-size: 16px; }
   justify-content: center;
   flex-direction: column;
   gap: 2px;
-  z-index: 100;
+  flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, opacity 0.15s ease;
   touch-action: none;
@@ -616,11 +616,10 @@ body.a11y-mode .wave-bar { animation-name: wave-a11y; }
    音量柱（錄音時即時音量，多色：綠→黃→紅）
    ============================================================ */
 .volume-meter {
-  position: fixed;
-  left: calc(50% + var(--fab-size) / 2 + 16px);
-  bottom: calc(var(--fab-bottom) + 10px);
+  /* 錄音鈕右邊的垂直音量柱（錄音時顯示） */
+  position: static;
   width: 16px;
-  height: calc(var(--fab-size) - 20px);
+  height: var(--fab-size);
   display: flex;
   flex-direction: column-reverse;
   gap: 2px;
@@ -628,7 +627,7 @@ body.a11y-mode .wave-bar { animation-name: wave-a11y; }
   border: 2px solid #4a4a58;
   border-radius: 8px;
   background: rgba(255,255,255,0.06);
-  z-index: 100;
+  flex-shrink: 0;
 }
 
 .vol-seg {
@@ -652,7 +651,6 @@ body.a11y-mode .wave-bar { animation-name: wave-a11y; }
 
 body.a11y-mode .volume-meter {
   width: 20px;
-  left: calc(50% + var(--fab-size) / 2 + 18px);
 }
 
 body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
@@ -677,7 +675,7 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 
 <!-- 作品選擇列 -->
 <div class="poem-selector" role="group" aria-label="選擇作品">
-  <button class="poem-btn" id="poemBtn0" onclick="selectPoem(0)" aria-pressed="false">聽雪</button>
+  <button class="poem-btn" id="poemBtn0" onclick="selectPoem(0)" aria-pressed="false" aria-label="聽雪">1</button>
 </div>
 
 <main class="content-area" id="textContainer" role="region" aria-label="朗讀文字內容"></main>
@@ -736,10 +734,8 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
     <span class="btn-text">音色</span>
   </button>
 
-</nav>
 
-<!-- 浮動錄音按鈕（按住錄音，放開播放） -->
-<button class="record-fab" id="recordFab" aria-label="按住錄音，放開播放">
+  <button class="record-fab" id="recordFab" aria-label="按住錄音，放開播放">
   <svg class="fab-icon" id="fabMicIcon" viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -755,8 +751,9 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
   </div>
 </button>
 
-<!-- 音量柱（錄音時即時音量，多色：綠→黃→紅） -->
-<div class="volume-meter" id="volumeMeter" aria-hidden="true"></div>
+  <div class="volume-meter" id="volumeMeter" aria-hidden="true"></div>
+</nav>
+
 
 <script>
 // ============================================================
@@ -796,7 +793,7 @@ POEMS.forEach((poem) => {
       words: s.words,
       poem: poem,
       localIdx: si,
-      pauseAfterMs: Math.round(((poem.pauseAfter ? poem.pauseAfter[si] : 0) || 0) * 1000)
+      pauseAfterMs: Math.round((poem.pauseAfter ? poem.pauseAfter[si] : 0) * 1000)
     });
   });
 });
@@ -992,17 +989,21 @@ function sanitizeVoice() {
 // 錄音按鈕定位（依控制列實際高度自動調整，避免重疊）
 // ============================================================
 function positionFab() {
+  // 錄音鈕已移入控制列：文字窗保障「詩句完整＋可滾動」，詩句在控制列上方的可見區內垂直居中
   const cb = document.querySelector('.control-bar');
-  const cbTop = cb.getBoundingClientRect().top;
-  const fabH = recordFab.offsetHeight;
-  const fabBottom = (window.innerHeight - cbTop) + 14;
-  document.documentElement.style.setProperty('--fab-bottom', fabBottom + 'px');
-  document.documentElement.style.setProperty('--fab-zone', (fabBottom + fabH + 24) + 'px');
-  // 文字窗口最小高度：詩句＋標題＋錄音鈕帶完整（詩句長時可滾動完整查看）
+  const topBar = document.querySelector('.top-setting-bar');
+  const sel = document.querySelector('.poem-selector');
+  const topBarH = topBar.offsetHeight + (sel && sel.offsetHeight > 0 ? sel.offsetHeight : 0);
   const pw = document.querySelector('.para-wrap');
-  const ph = document.querySelector('.poem-head');
-  const need = (ph ? ph.offsetHeight + 40 : 0) + (pw ? pw.offsetHeight : 0) + 20 + (fabBottom + fabH + 24);
-  document.documentElement.style.setProperty('--content-min-h', Math.max(window.innerHeight - cb.offsetHeight, need) + 'px');
+  const need = (pw ? pw.offsetHeight : 0) + 44;
+  const cmh = Math.max(window.innerHeight - cb.offsetHeight, need);
+  document.documentElement.style.setProperty('--content-min-h', cmh + 'px');
+  if (pw) {
+    const visH = window.innerHeight - topBarH - cb.offsetHeight;
+    const mt = Math.max(0, (visH - pw.offsetHeight) / 2);
+    pw.style.marginTop = mt + 'px';
+    pw.style.marginBottom = 'auto';
+  }
 }
 
 // ============================================================
@@ -1012,7 +1013,8 @@ function renderSentence() {
   const sent = dataset[currentSentIdx];
   const p = sent.poem;
   let html = `<div class="sentence-stage">`;
-  html += `<div class="poem-head">${p.title}<span class="poem-author">　${p.author}</span></div>`;
+  // 頂部工具列顯示當前作品名（內容窗只留詩句，給文字最大空間）
+  document.querySelector('.top-setting-bar h1').textContent = p.title;
   html += `<div class="para-holder"><div class="para-wrap sentence-active">`;
   sent.words.forEach((word) => {
     if (word.isPunc) {
@@ -1327,12 +1329,8 @@ function fitFontSize() {
     const charsPerLine = Math.max(1, Math.floor(w / charW));
     const lines = Math.ceil(words / charsPerLine);
     const totalH = lines * size * 2.6;
-    // 預留頂部固定標題與底部錄音按鈕的空間（無障礙模式），避免遮擋
-    let budget = h * 0.9 - 100;
-    if (a11yMode) {
-      const zone = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fab-zone')) || 112;
-      budget -= zone;
-    }
+    // 一般／無障礙模式統一使用最大字體（錄音鈕已移入控制列，不佔文字窗）
+    const budget = h * 0.9 - 100;
     if (totalH <= Math.max(80, budget)) break;
     size -= 2;
   }
@@ -1739,6 +1737,11 @@ document.addEventListener('click', () => {
 // ============================================================
 // 初始化
 // ============================================================
+if (POEMS.length < 2) {
+  // 只有一個作品時不顯示作品選擇按鈕
+  const sel = document.querySelector('.poem-selector');
+  if (sel) sel.style.display = 'none';
+}
 applyMode();
 renderSentence();
 updatePlayIcon();
