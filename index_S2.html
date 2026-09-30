@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>詩詞朗讀｜朗讀練習（無障礙版）</title>
 
-<link rel="manifest" href="./manifest.json" />
+<link rel="manifest" href="./manifest_s2.json" />
 <meta name="theme-color" content="#000000" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -122,21 +122,12 @@ body.a11y-mode .top-setting-bar {
   white-space: nowrap;
 }
 
-.offline-status {
-  font-size: 12px;
-  color: #00FFCC;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-body.a11y-mode .offline-status { font-size: 14px; }
-
 
 .mode-btn {
   min-width: var(--btn-min);
   min-height: var(--btn-min);
   padding: 8px 14px;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: bold;
   border: 2px solid #00FFCC;
   border-radius: var(--btn-radius);
@@ -145,8 +136,13 @@ body.a11y-mode .offline-status { font-size: 14px; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
 }
+
+body.a11y-mode .mode-btn {
+  font-size: 24px;
+  border-width: 3px;
+}
+
 
 .mode-btn[aria-pressed="true"] { background: #00FFCC; color: #000000; }
 .mode-btn:focus-visible { outline: 4px solid var(--focus-ring); outline-offset: 3px; }
@@ -673,15 +669,9 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 <header class="top-setting-bar">
   <h1>詩詞朗讀｜朗讀練習</h1>
 
-  <span class="offline-status" id="offlineStatus" role="status"></span>
-
-  <button class="mode-btn" id="modeToggle" aria-pressed="false"
-          onclick="toggleA11yMode()">
-    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </svg>
-    <span id="modeBtnText">無障礙</span>
+    <button class="mode-btn" id="modeToggle" aria-pressed="false"
+          onclick="toggleA11yMode()" aria-label="切換至無障礙模式">
+    <span id="modeBtnText">B</span>
   </button>
 </header>
 
@@ -911,7 +901,8 @@ function announce(msg) { statusBox.textContent = msg; }
 function applyMode() {
   document.body.classList.toggle('a11y-mode', a11yMode);
   modeBtn.setAttribute('aria-pressed', a11yMode ? 'true' : 'false');
-  modeBtnText.textContent = a11yMode ? '一般模式' : '無障礙';
+  modeBtn.setAttribute('aria-label', a11yMode ? '切換至一般模式' : '切換至無障礙模式');
+  modeBtnText.textContent = a11yMode ? 'A' : 'B';
   renderSentence();
   requestAnimationFrame(fitFontSize);
   positionFab();
@@ -1394,10 +1385,10 @@ container.addEventListener('touchend', (e) => {
   const dy = e.changedTouches[0].clientY - touchStartY;
   const dx = e.changedTouches[0].clientX - touchStartX;
 
-  if (Math.abs(dy) > SWIPE_DISTANCE &&
-      Math.abs(dx) < Math.abs(dy) * 0.5 &&
+  if (Math.abs(dx) > SWIPE_DISTANCE &&
+      Math.abs(dy) < Math.abs(dx) * 0.5 &&
       dt < SWIPE_TIME) {
-    if (dy < 0) nextSentence();
+    if (dx < 0) nextSentence();
     else prevSentence();
     touchMoved = true;
   }
@@ -1781,11 +1772,14 @@ requestAnimationFrame(() => {
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-// ===== 離線預載：後台下載全部音檔（總量約 5 MB），完成後可離線使用 =====
-const offlineStatus = document.getElementById('offlineStatus');
+  
+// 不自動彈出安裝提示：由用戶自行從瀏覽器選單決定是否安裝／加到主螢幕
+window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
+window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+
+// ===== 離線預載：後台下載全部音檔（完成時語音提示一次，不顯示文字） =====
 async function preloadAllAudio() {
-  if (!offlineStatus || !navigator.serviceWorker) return;
+  if (!navigator.serviceWorker) return;
   const urls = [];
   POEMS.forEach((poem) => {
     const dir = new URL(poem.audioDir, location.href).href;
@@ -1797,22 +1791,14 @@ async function preloadAllAudio() {
   });
   const list = [...new Set(urls)];
   if (!list.length) return;
-  let done = 0;
-  const render = () => { offlineStatus.textContent = '離線 ' + done + '/' + list.length; };
-  render();
   const BATCH = 6;
   for (let i = 0; i < list.length; i += BATCH) {
-    const chunk = list.slice(i, i + BATCH);
-    await Promise.all(chunk.map((u) => fetch(u, { cache: 'no-cache' }).then((r) => r.ok).catch(() => false)));
-    done = Math.min(list.length, done + chunk.length);
-    render();
+    await Promise.all(list.slice(i, i + BATCH).map((u) => fetch(u, { cache: 'no-cache' }).then((r) => r.ok).catch(() => false)));
   }
-  offlineStatus.textContent = '已下載・可離線';
-  try { announce('已下載全部音檔，可以離線使用'); } catch (e) {}
+  try { announce('音檔已下載，可離線使用'); } catch (e) {}
 }
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then(async () => {
-    // 首次訪問 SW 尚未接管頁面：等待接管後預載才會寫入快取
     if (!navigator.serviceWorker.controller) {
       await new Promise((res) => {
         navigator.serviceWorker.addEventListener('controllerchange', res, { once: true });
@@ -1821,8 +1807,6 @@ if ('serviceWorker' in navigator) {
     }
     setTimeout(preloadAllAudio, 300);
   }).catch(() => {});
-} else if (offlineStatus) {
-  offlineStatus.style.display = 'none';
 }
 
 }

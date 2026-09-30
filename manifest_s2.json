@@ -1,29 +1,29 @@
 {
-  "id": "./",
-  "name": "聽雪｜朗讀練習",
-  "short_name": "聽雪朗讀",
-  "description": "《聽雪》金波 朗讀練習（含注音、錄音、無障礙模式）",
+  "id": "./s2",
+  "name": "水仙子・尋梅｜春夜喜雨 朗讀練習",
+  "short_name": "尋梅朗讀",
+  "description": "《水仙子・尋梅》喬吉／《春夜喜雨》杜甫 朗讀練習（含注音、錄音、無障礙模式）",
   "display": "standalone",
-  "start_url": "./index_P4.html",
+  "start_url": "./index_S2.html",
   "scope": "./",
   "background_color": "#000000",
   "theme_color": "#000000",
   "lang": "zh-Hant",
   "icons": [
     {
-      "src": "icon-p4-192.png",
+      "src": "icon-s2-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-p4-512.png",
+      "src": "icon-s2-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-p4-512.png",
+      "src": "icon-s2-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
