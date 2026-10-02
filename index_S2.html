@@ -841,6 +841,11 @@ const INTER_SENTENCE_DELAY = 600;   // 無標記時預設停頓
 const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
 const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
+// 朗讀（真人錄音 00-朗誦.mp3）句時間表（秒）：報題 + 句1~8 字音區間
+const RECITE_START = [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.26, 30.06];
+const RECITE_END = [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76];
+const RECITE_STOP = 32.76;   // 播到第 8 句末自動停（其後為原檔結尾靜音）
+
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
 const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗讀'];
 let savedVoiceIdx = parseInt(localStorage.getItem('voiceIdx') || '0', 10);
@@ -1299,7 +1304,7 @@ function togglePlayAudio() {
 
   stopAudio();
 
-  // 「朗讀」音色：先報題（00-朗讀.mp3）再逐句連續播放
+  // 「朗讀」音色：單一原檔播放（currentTime 定位切句，背景音樂連續）
   if (currentVoice === '朗讀') {
     if (!poemHasRecite(dataset[currentSentIdx].poem)) {
       announce('此作品沒有朗讀音檔');
@@ -1327,44 +1332,55 @@ function togglePlayAudio() {
   });
 }
 
-// 朗讀播放（分句）：從詩首句開始時先播報題 00-朗讀.mp3，再逐句 NN-朗讀.mp3
+// 朗讀播放：單一完整原檔（00-朗誦.mp3），用 currentTime 定位切句；
+// 首句起點含報題，其餘從該句字音起點開始；播到第 8 句末自動停止
 function startRecitePlayback() {
   const poem = dataset[currentSentIdx].poem;
-  if (dataset[currentSentIdx].localIdx === 0) {
-    const intro = new Audio(poem.audioDir + '00-朗讀.mp3');
-    intro.playbackRate = speedRate;
-    audio = intro;
-    audio.onended = () => { if (isPlaying) playFromCurrentSentence(); };
-    audio.onerror = () => { announce('報題音檔載入失敗'); stopAudio(); };
-    audio.play().then(() => {
-      isPlaying = true;
-      playBtn.classList.add('playing');
-      updatePlayIcon();
-      announce(`播放《${poem.title}》朗讀`);
-    }).catch(() => {
-      announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
-    });
-    return;
+  if (audio) {
+    audio.removeEventListener('timeupdate', reciteTimeUpdate);
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio = null;
   }
-  playFromCurrentSentence();
-}
-
-// 從當前句開始逐句播放（朗讀音色）
-function playFromCurrentSentence() {
-  createAudioForCurrentSentence();
-  audio.onended = () => { playNextInSequence(); };
-  audio.onerror = () => {
-    announce('朗讀音檔載入失敗');
-    stopAudio();
-  };
+  audio = new Audio(poem.audioDir + '00-朗誦.mp3');
+  audio.playbackRate = speedRate;
+  const local = dataset[currentSentIdx].localIdx;
+  audio.currentTime = RECITE_START[local === 0 ? 0 : local + 1];
+  audio.addEventListener('timeupdate', reciteTimeUpdate);
+  audio.onerror = () => { announce('朗讀音檔載入失敗'); stopAudio(); };
   audio.play().then(() => {
     isPlaying = true;
     playBtn.classList.add('playing');
     updatePlayIcon();
-    announce(`播放第 ${currentSentIdx + 1} 段 ${currentVoice}`);
+    announce(`播放《${poem.title}》朗讀`);
   }).catch(() => {
     announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
   });
+}
+
+// 朗讀播放中：跟隨進度切換高亮句；播到結尾自動停止
+function reciteTimeUpdate() {
+  if (!audio || !isPlaying) return;
+  const poem = dataset[currentSentIdx].poem;
+  const firstIdx = dataset.findIndex(s => s.poem === poem);
+  const t = audio.currentTime;
+  if (t >= RECITE_STOP) {
+    stopAudio();
+    announce(`《${poem.title}》朗讀播放完畢`);
+    return;
+  }
+  let local = 0;
+  for (let i = 0; i < RECITE_START.length; i++) {
+    if (t >= RECITE_START[i]) local = i;
+    else break;
+  }
+  const targetIdx = firstIdx + (local > 0 ? local - 1 : 0);
+  if (targetIdx !== currentSentIdx) {
+    currentSentIdx = targetIdx;
+    renderSentence();
+    requestAnimationFrame(fitFontSize);
+  }
 }
 
 // ============================================================
@@ -1454,6 +1470,17 @@ document.addEventListener('touchcancel', () => { if (isPressing) endLongPress();
 // 句子切換
 // ============================================================
 function prevSentence() {
+  // 朗讀播放中：時間跳轉到上一句（不中斷音樂）
+  if (currentVoice === '朗讀' && isPlaying && audio) {
+    const local = dataset[currentSentIdx].localIdx;
+    if (local <= 0) { announce('已經是本作品第一句'); return; }
+    currentSentIdx--;
+    renderSentence();
+    requestAnimationFrame(fitFontSize);
+    audio.currentTime = RECITE_START[local];
+    announce(`切換到第 ${currentSentIdx + 1} 句`);
+    return;
+  }
   stopAudio();
   resumeAfterAction = false;
   resumeFromStart = false;
@@ -1465,6 +1492,20 @@ function prevSentence() {
 }
 
 function nextSentence() {
+  // 朗讀播放中：時間跳轉到下一句（不中斷音樂）
+  if (currentVoice === '朗讀' && isPlaying && audio) {
+    const local = dataset[currentSentIdx].localIdx;
+    if (local >= dataset[currentSentIdx].poem.sentences.length - 1) {
+      announce('已經是本作品最後一句');
+      return;
+    }
+    currentSentIdx++;
+    renderSentence();
+    requestAnimationFrame(fitFontSize);
+    audio.currentTime = RECITE_START[local + 2];
+    announce(`切換到第 ${currentSentIdx + 1} 句`);
+    return;
+  }
   stopAudio();
   resumeAfterAction = false;
   resumeFromStart = false;
@@ -1860,10 +1901,7 @@ async function preloadAllAudio() {
     ['Male-A', 'Male-B', 'Female-A'].forEach((v) => {
       for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-' + v + '.mp3');
     });
-    if (poem.hasRecite) {
-      urls.push(dir + '00-朗讀.mp3');
-      for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-朗讀.mp3');
-    }
+    if (poem.hasRecite) urls.push(dir + '00-朗誦.mp3');
   });
   const list = [...new Set(urls)];
   if (!list.length) return;
