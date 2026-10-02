@@ -483,6 +483,13 @@ body.a11y-mode .speed-btn {
   font-size: 16px;
 }
 
+body.a11y-mode .voice-btn.voice-reciting {
+  border: 4px solid #FFD54F;
+  background: #C62828;
+  box-shadow: 0 0 0 2px #000 inset, 0 0 18px #FFD54F;
+  transition: none;   /* 切到朗讀立即高亮，弱視學生即時可辨 */
+}
+
 .nav-btn:hover, .sm-btn:hover, .play-btn:hover, .speed-btn:hover {
   background: var(--btn-hover);
 }
@@ -1000,6 +1007,9 @@ function updateVoiceLabel() {
   document.getElementById('voiceVal').textContent = currentVoice;
   document.getElementById('voiceBtn').setAttribute('aria-label',
     `音色，目前 ${currentVoice}，點擊切換`);
+  // 無障礙模式＋真人朗讀音色：按鈕高亮，方便弱視學生判斷
+  document.getElementById('voiceBtn').classList.toggle('voice-reciting',
+    a11yMode && currentVoice === '朗讀');
 }
 
 function cycleVoice() {
@@ -1882,6 +1892,7 @@ if (POEMS.length < 2) {
 }
 applyMode();
 renderSentence();
+fitFontSize();   // 同步首跑：保證第 1 句載入即正確字號（與其他句一致）
 updatePlayIcon();
 updateVoiceLabel();
 buildVolumeMeter();
@@ -1892,6 +1903,12 @@ requestAnimationFrame(() => {
   positionFab();
   setTimeout(fitFontSize, 100);
 });
+window.addEventListener('load', () => { fitFontSize(); positionFab(); });
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => { fitFontSize(); positionFab(); });
+}
+// 嘗試觸發 Android Chrome 收合網址欄，讓內容最大化（無害；不保證所有瀏覽器生效）
+setTimeout(() => { try { window.scrollTo(0, 1); } catch (e) {} }, 500);
 </script>
 <script>
 if ('serviceWorker' in navigator) {
