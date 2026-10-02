@@ -810,7 +810,7 @@ const POEMS = [
     audioDir: "./sound/春夜喜雨/",
     hasRecite: true,   // 具備分句朗讀音檔（00-朗讀.mp3 報題 + 01~NN-朗讀.mp3）
     pauseAfter: [0.7, 0.8, 0.7, 1.0, 0.7, 0.8, 0.7, 0],
-    recitePause: [1.02, 1.26, 0.78, 1.96, 0.74, 0, 0.50, 0],   // 真人朗讀句間停頓（無額外）
+    recitePause: [0, 0, 0, 0.56, 0, 0, 0, 0],   // 真人朗讀句間停頓（段已含 0.7s 緩衝，僅補剩餘間隙）
     sentences: [
       {words:[{h:"好",p:"hǎo"},{h:"雨",p:"yǔ"},{h:"知",p:"zhī"},{h:"時",p:"shí"},{h:"節",p:"jié"},{h:"，",p:"",isPunc:true}]},
       {words:[{h:"當",p:"dāng"},{h:"春",p:"chūn"},{h:"乃",p:"nǎi"},{h:"發",p:"fā"},{h:"生",p:"shēng"},{h:"。",p:"",isPunc:true}]},
@@ -843,8 +843,9 @@ const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
 const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗讀'];
-let voiceIdx = 0;
-let currentVoice = VOICES[0];
+let savedVoiceIdx = parseInt(localStorage.getItem('voiceIdx') || '0', 10);
+let voiceIdx = (savedVoiceIdx >= 0 && savedVoiceIdx < VOICES.length) ? savedVoiceIdx : 0;
+let currentVoice = VOICES[voiceIdx];
 
 // 該詩是否具備朗讀音檔（報題 00-朗讀.mp3 ＋ 每句 NN-朗讀.mp3）
 function poemHasRecite(poem) {
@@ -854,7 +855,9 @@ function poemHasRecite(poem) {
 // ============================================================
 // 全域狀態
 // ============================================================
-let currentSentIdx = 0;
+let savedPoemIdx = parseInt(localStorage.getItem('poemIdx') || '0', 10);
+let currentSentIdx = (POEMS[savedPoemIdx] ? dataset.findIndex(s => s.poem === POEMS[savedPoemIdx]) : 0);
+currentSentIdx = currentSentIdx >= 0 ? currentSentIdx : 0;
 let speedRate = 1.0;
 let speedPresetIdx = 1;
 let wakeLock = null;
@@ -972,6 +975,7 @@ function selectPoem(poemIdx) {
   resumeFromStart = false;
 
   currentSentIdx = dataset.findIndex(s => s.poem === poem);
+  localStorage.setItem('poemIdx', String(poemIdx));
   renderSentence();
   requestAnimationFrame(fitFontSize);
   // 切換後若所選詩沒有「朗讀」音檔，自動跳回第一個音色
@@ -1003,6 +1007,7 @@ function cycleVoice() {
   }
   voiceIdx = next;
   currentVoice = VOICES[voiceIdx];
+  localStorage.setItem('voiceIdx', String(voiceIdx));
   updateVoiceLabel();
   if (resumeAfterAction) {
     resumeAfterAction = false;
@@ -1329,7 +1334,9 @@ function startRecitePlayback() {
     const intro = new Audio(poem.audioDir + '00-朗讀.mp3');
     intro.playbackRate = speedRate;
     audio = intro;
-    audio.onended = () => { playFromCurrentSentence(); };
+    audio.onended = () => {
+      setTimeout(() => { if (isPlaying) playFromCurrentSentence(); }, 1160);
+    };
     audio.onerror = () => { announce('報題音檔載入失敗'); stopAudio(); };
     audio.play().then(() => {
       isPlaying = true;
@@ -1497,7 +1504,6 @@ function resetAll() {
   document.getElementById('speedVal').textContent = '1.0';
   renderSentence();
   requestAnimationFrame(fitFontSize);
-  sanitizeVoice();
   announce('已重置，回到第一句');
 }
 
