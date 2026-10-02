@@ -13,6 +13,16 @@
 <meta name="mobile-web-app-capable" content="yes" />
 
 <style>
+/* 全頁不可選取文字：頁面與按鈕只可點擊，長按不彈瀏覽器選單 */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ============================================================
    一般模式（預設）
    ============================================================ */
@@ -563,8 +573,16 @@ body.a11y-mode .voice-name { font-size: 16px; }
 }
 
 .record-fab.recording {
-  background: #b71c1c;
-  border-color: #FF0000;
+  background: #ff3b30;
+  border-color: #ffd0c8;
+  transform: scale(1.18);
+  box-shadow: 0 0 30px rgba(255, 59, 48, 0.8);
+  animation: fab-breathe 1.1s ease-in-out infinite;
+}
+
+@keyframes fab-breathe {
+  0%, 100% { transform: scale(1.18); }
+  50% { transform: scale(1.34); }
 }
 
 .record-fab.playing-back {
@@ -648,15 +666,15 @@ body.a11y-mode .wave-bar { animation-name: wave-a11y; }
   transition: background 0.08s linear, box-shadow 0.08s linear;
 }
 
-.vol-seg:nth-child(-n+4) { --seg-color: #22c55e; }
-.vol-seg:nth-child(n+5):nth-child(-n+7) { --seg-color: #eab308; }
-.vol-seg:nth-child(n+8) { --seg-color: #ef4444; }
+.vol-seg:nth-child(-n+4) { --seg-color: #00ffa3; }
+.vol-seg:nth-child(n+5):nth-child(-n+7) { --seg-color: #ffd94d; }
+.vol-seg:nth-child(n+8) { --seg-color: #ff4757; }
 
-.volume-meter.active .vol-seg { background: rgba(255,255,255,0.28); }
+.volume-meter.active .vol-seg { background: rgba(255,255,255,0.30); }
 
 .vol-seg.on {
-  background: var(--seg-color, #22c55e);
-  box-shadow: 0 0 6px var(--seg-color, #22c55e);
+  background: var(--seg-color, #00ffa3);
+  box-shadow: 0 0 12px var(--seg-color, #00ffa3), 0 0 4px rgba(255,255,255,0.55);
 }
 
 body.a11y-mode .volume-meter {
@@ -762,6 +780,9 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 
 
 <script>
+// 防長按／右鍵彈出瀏覽器選單（重新載入、下載、列印、分享等）
+document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
+
 // ============================================================
 // 兩首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫），共 16 段
 // pauseAfter：各句播完後的停頓秒數（取自作品文字檔的 <#X#> 標記）
@@ -1498,7 +1519,10 @@ async function startPressRecording() {
                           recordStream.getAudioTracks().some(t => t.readyState === 'live');
 
     if (!hasLiveStream) {
-      recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordStream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({ audio: true }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('mic-timeout')), 8000))
+      ]);
     }
 
     // 等待麥克風權限期間已放開按鈕 → 取消本次錄音
@@ -1509,7 +1533,7 @@ async function startPressRecording() {
     }
 
     ensureAnalyser();
-    startVolumeMeter();
+    sweepVolumeMeter(() => startVolumeMeter());
 
     let mimeType = '';
     if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
@@ -1604,6 +1628,28 @@ function setVolumeLevel(level) {
   volSegs.forEach((seg, i) => seg.classList.toggle('on', i < lit));
 }
 
+let sweepTimer = null;
+
+// 啟動錄音：音量柱先由低爬到頂格，再回落，然後進入實時音量
+function sweepVolumeMeter(done) {
+  if (sweepTimer) clearInterval(sweepTimer);
+  volumeMeter.classList.add('active');
+  let step = 0;
+  const frames = [];
+  for (let i = 1; i <= 10; i++) frames.push(i / 10);
+  for (let i = 9; i >= 0; i--) frames.push(i / 10);
+  sweepTimer = setInterval(() => {
+    if (step < frames.length) {
+      setVolumeLevel(frames[step]);
+      step++;
+    } else {
+      clearInterval(sweepTimer);
+      sweepTimer = null;
+      if (done) done();
+    }
+  }, 60);
+}
+
 function startVolumeMeter() {
   if (!ensureAnalyser()) return;
   volumeMeter.classList.add('active');
@@ -1624,6 +1670,7 @@ function startVolumeMeter() {
 }
 
 function stopVolumeMeter() {
+  if (sweepTimer) { clearInterval(sweepTimer); sweepTimer = null; }
   volumeMeter.classList.remove('active');
   if (volRaf) {
     cancelAnimationFrame(volRaf);
