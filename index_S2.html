@@ -860,10 +860,12 @@ const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
 const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
 // 朗讀（真人錄音 00-朗誦.mp3）句時間表（秒）：報題 + 句1~8 字音區間
-const RECITE_START = [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.26, 30.06];
+const RECITE_START = [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.40, 30.06];
 const RECITE_END = [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76];
 // 句播放起點 = 與上一句的中點（從停頓音樂中自然進入，不貼字音）
-const RECITE_SEEK = [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.26, 29.81];
+const RECITE_SEEK = [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.35, 29.81];
+// 逐句尾音延長（秒）：句3/句5/句7 尾音較短（過遲→縮短）、句6 放寬（過早→延長）
+const TAIL_EXT = [0.7, 0.7, 0.30, 0.7, 0.35, 0.20, 0.20, 0.7];
 let reciteSingleMode = false;   // true：上/下句後只播當前句，人聲播完即停
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
@@ -1393,9 +1395,9 @@ function reciteTimeUpdate() {
   const t = audio.currentTime;
   if (reciteSingleMode) {
     const local = dataset[currentSentIdx].localIdx;
-    // 停止點 = 字音終點 +0.7s（尾音完整），但不侵入下一句首字（預留 0.05s 緩衝）
+    // 停止點 = 字音終點 + 逐句尾音延長，但不侵入下一句首字（預留 0.05s 緩衝）
     const nextStart = (local + 2 < RECITE_START.length) ? RECITE_START[local + 2] : Infinity;
-    const stopAt = Math.min(RECITE_END[local + 1] + 0.7, nextStart - 0.05);
+    const stopAt = Math.min(RECITE_END[local + 1] + TAIL_EXT[local], nextStart - 0.05);
     if (t >= stopAt) {
       stopAudio();
       announce(`第 ${currentSentIdx + 1} 句播放完畢`);
