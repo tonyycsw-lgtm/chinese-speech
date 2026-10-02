@@ -718,6 +718,7 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 <div class="poem-selector" role="group" aria-label="選擇作品">
   <button class="poem-btn" id="poemBtn0" onclick="selectPoem(0)" aria-pressed="false" aria-label="水仙子・尋梅">1</button>
   <button class="poem-btn" id="poemBtn1" onclick="selectPoem(1)" aria-pressed="false" aria-label="春夜喜雨">2</button>
+  <button class="poem-btn" id="poemBtn2" onclick="selectPoem(2)" aria-pressed="false" aria-label="聽雪">3</button>
 </div>
 
 <main class="content-area" id="textContainer" role="region" aria-label="朗讀文字內容"></main>
@@ -802,7 +803,7 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
 // ============================================================
-// 兩首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫），共 16 段
+// 三首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫）＋ 聽雪（金波），共 30 段
 // pauseAfter：各句播完後的停頓秒數（取自作品文字檔的 <#X#> 標記）
 // ============================================================
 const POEMS = [
@@ -826,7 +827,7 @@ const POEMS = [
     title: "春夜喜雨",
     author: "杜甫",
     audioDir: "./sound/春夜喜雨/",
-    hasRecite: true,   // 具備分句朗讀音檔（00-朗讀.mp3 報題 + 01~NN-朗讀.mp3）
+    hasRecite: true,   // 具備整首真人朗誦音檔（00-朗誦.mp3）
     pauseAfter: [0.7, 0.8, 0.7, 1.0, 0.7, 0.8, 0.7, 0],
     recitePause: [0, 0, 0, 0, 0, 0, 0, 0],   // 真人朗讀：停頓音樂已併入段內，段間無縫相接（保持背景音樂連續）
     sentences: [
@@ -839,6 +840,29 @@ const POEMS = [
       {words:[{h:"曉",p:"xiǎo"},{h:"看",p:"kàn"},{h:"紅",p:"hóng"},{h:"濕",p:"shī"},{h:"處",p:"chù"},{h:"，",p:"",isPunc:true}]},
       {words:[{h:"花",p:"huā"},{h:"重",p:"zhòng"},{h:"錦",p:"jǐn"},{h:"官",p:"guān"},{h:"城",p:"chéng"},{h:"。",p:"",isPunc:true}]}
     ]
+  },
+  {
+    title: "聽雪",
+    author: "金波",
+    audioDir: "./sound/聽雪/",
+    hasRecite: true,   // 具備整首真人朗誦音檔（00-朗誦.mp3）
+    recitePause: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],   // 真人朗誦：句間無縫相接（背景音樂連續）
+    sentences: [
+      {words:[{h:"雪",p:"xuě"},{h:"花",p:"huā"},{h:"，",p:"",isPunc:true},{h:"潔",p:"jié"},{h:"白",p:"bái"},{h:"無",p:"wú"},{h:"瑕",p:"xiá"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"雪",p:"xuě"},{h:"花",p:"huā"},{h:"，",p:"",isPunc:true},{h:"柔",p:"róu"},{h:"美",p:"měi"},{h:"文",p:"wén"},{h:"靜",p:"jìng"},{h:"；",p:"",isPunc:true}]},
+      {words:[{h:"從",p:"cóng"},{h:"不",p:"bù"},{h:"願",p:"yuàn"},{h:"打",p:"dǎ"},{h:"擾",p:"rǎo"},{h:"別",p:"bié"},{h:"人",p:"rén"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"總",p:"zǒng"},{h:"是",p:"shì"},{h:"靜",p:"jìng"},{h:"悄",p:"qiāo"},{h:"悄",p:"qiāo"},{h:"降",p:"jiàng"},{h:"臨",p:"lín"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"雪",p:"xuě"},{h:"花",p:"huā"},{h:"，",p:"",isPunc:true},{h:"腳",p:"jiǎo"},{h:"步",p:"bù"},{h:"輕",p:"qīng"},{h:"輕",p:"qīng"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"像",p:"xiàng"},{h:"羽",p:"yǔ"},{h:"毛",p:"máo"},{h:"飄",p:"piāo"},{h:"在",p:"zài"},{h:"空",p:"kōng"},{h:"中",p:"zhōng"},{h:"；",p:"",isPunc:true}]},
+      {words:[{h:"飛",p:"fēi"},{h:"向",p:"xiàng"},{h:"森",p:"sēn"},{h:"林",p:"lín"},{h:"，",p:"",isPunc:true},{h:"飛",p:"fēi"},{h:"向",p:"xiàng"},{h:"麥",p:"mài"},{h:"田",p:"tián"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"我",p:"wǒ"},{h:"聽",p:"tīng"},{h:"見",p:"jiàn"},{h:"雪",p:"xuě"},{h:"花",p:"huā"},{h:"的",p:"de"},{h:"翅",p:"chì"},{h:"膀",p:"bǎng"},{h:"在",p:"zài"},{h:"扇",p:"shān"},{h:"動",p:"dòng"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"織",p:"zhī"},{h:"一",p:"yī"},{h:"件",p:"jiàn"},{h:"白",p:"bái"},{h:"色",p:"sè"},{h:"的",p:"de"},{h:"羽",p:"yǔ"},{h:"衣",p:"yī"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"覆",p:"fù"},{h:"蓋",p:"gài"},{h:"著",p:"zhe"},{h:"家",p:"jiā"},{h:"鄉",p:"xiāng"},{h:"的",p:"de"},{h:"山",p:"shān"},{h:"頂",p:"dǐng"},{h:"；",p:"",isPunc:true}]},
+      {words:[{h:"織",p:"zhī"},{h:"一",p:"yī"},{h:"件",p:"jiàn"},{h:"潔",p:"jié"},{h:"白",p:"bái"},{h:"的",p:"de"},{h:"婚",p:"hūn"},{h:"紗",p:"shā"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"送",p:"sòng"},{h:"給",p:"gěi"},{h:"山",p:"shān"},{h:"上",p:"shàng"},{h:"的",p:"de"},{h:"白",p:"bái"},{h:"樺",p:"huà"},{h:"林",p:"lín"},{h:"。",p:"",isPunc:true}]},
+      {words:[{h:"雪",p:"xuě"},{h:"花",p:"huā"},{h:"的",p:"de"},{h:"懷",p:"huái"},{h:"抱",p:"bào"},{h:"很",p:"hěn"},{h:"溫",p:"wēn"},{h:"馨",p:"xīn"},{h:"，",p:"",isPunc:true}]},
+      {words:[{h:"孕",p:"yùn"},{h:"育",p:"yù"},{h:"著",p:"zhe"},{h:"又",p:"yòu"},{h:"一",p:"yī"},{h:"個",p:"gè"},{h:"新",p:"xīn"},{h:"春",p:"chūn"},{h:"。",p:"",isPunc:true}]}
+    ]
   }
 ];
 
@@ -850,7 +874,7 @@ POEMS.forEach((poem) => {
       words: s.words,
       poem: poem,
       localIdx: si,
-      pauseAfterMs: Math.round((poem.pauseAfter[si] || 0) * 1000)
+      pauseAfterMs: Math.round((poem.pauseAfter ? poem.pauseAfter[si] : 0) * 1000)
     });
   });
 });
@@ -859,13 +883,26 @@ const INTER_SENTENCE_DELAY = 600;   // 無標記時預設停頓
 const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
 const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
-// 朗讀（真人錄音 00-朗誦.mp3）句時間表（秒）：報題 + 句1~8 字音區間
-const RECITE_START = [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.70, 30.06];
-const RECITE_END = [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76];
-// 句播放起點 = 與上一句的中點（從停頓音樂中自然進入，不貼字音）
-const RECITE_SEEK = [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.35, 29.81];
-// 逐句尾音延長（秒）：句3/句5/句7 尾音較短（過遲→縮短）、句6 放寬（過早→延長）
-const TAIL_EXT = [0.7, 0.7, 0.30, 0.7, 0.35, 0.40, 0.20, 0.7];
+// 真人朗誦定位表（00-朗誦.mp3，每詩一張）：
+// offset：春夜喜雨 0 段為報題 → 1；聽雪無報題 → 0
+// SEEK[i] = 句 (i+1) 的播放起點（句1 從 0 連續播完整檔，不用 SEEK）
+// TAIL[i] = 句 (i+1) 尾音延長
+const RECITE_MAP = {
+  聽雪: {
+    offset: 0,
+    START: [0.00, 5.00, 9.64, 14.00, 18.62, 24.34, 28.74, 36.64, 44.28, 48.78, 53.98, 57.38, 63.38, 68.02],
+    END: [4.32, 9.64, 14.00, 18.62, 24.34, 28.74, 34.12, 42.48, 48.78, 52.28, 57.38, 62.68, 68.02, 75.10],
+    SEEK: [0.00, 4.66, 10.00, 14.00, 18.90, 24.34, 29.20, 35.38, 43.38, 48.78, 53.13, 57.80, 63.03, 68.02],
+    TAIL: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
+  },
+  春夜喜雨: {
+    offset: 1,
+    START: [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.70, 30.06],
+    END: [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76],
+    SEEK: [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.35, 29.81],
+    TAIL: [0.7, 0.7, 0.30, 0.7, 0.35, 0.40, 0.20, 0.7]
+  }
+};
 let reciteSingleMode = false;   // true：上/下句後只播當前句，人聲播完即停
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
@@ -1361,6 +1398,8 @@ function togglePlayAudio() {
 // 首句起點含報題，其餘從該句字音起點開始；播到第 8 句末自動停止
 function startRecitePlayback() {
   const poem = dataset[currentSentIdx].poem;
+  const R = RECITE_MAP[poem.title];
+  if (!R) { announce('此作品暫無朗讀音檔'); return; }
   if (audio) {
     audio.removeEventListener('timeupdate', reciteTimeUpdate);
     audio.onended = null;
@@ -1371,7 +1410,7 @@ function startRecitePlayback() {
   audio = new Audio(poem.audioDir + '00-朗誦.mp3');
   audio.playbackRate = speedRate;
   const local = dataset[currentSentIdx].localIdx;
-  audio.currentTime = (local === 0 ? 0 : RECITE_SEEK[local]);
+  audio.currentTime = (local === 0 ? 0 : R.SEEK[local]);
   // 首句：連續播完整檔；其他句（上/下句切換後）：只播當前句，播完即停
   reciteSingleMode = (local !== 0);
   audio.addEventListener('timeupdate', reciteTimeUpdate);
@@ -1391,13 +1430,16 @@ function startRecitePlayback() {
 function reciteTimeUpdate() {
   if (!audio || !isPlaying) return;
   const poem = dataset[currentSentIdx].poem;
+  const R = RECITE_MAP[poem.title];
+  if (!R) return;
   const firstIdx = dataset.findIndex(s => s.poem === poem);
   const t = audio.currentTime;
   if (reciteSingleMode) {
     const local = dataset[currentSentIdx].localIdx;
+    const li = local + R.offset;
     // 停止點 = 字音終點 + 逐句尾音延長，但不侵入下一句首字（預留 0.05s 緩衝）
-    const nextStart = (local + 2 < RECITE_START.length) ? RECITE_START[local + 2] : Infinity;
-    const stopAt = Math.min(RECITE_END[local + 1] + TAIL_EXT[local], nextStart - 0.05);
+    const nextStart = (li + 1 < R.START.length) ? R.START[li + 1] : Infinity;
+    const stopAt = Math.min(R.END[li] + R.TAIL[local], nextStart - 0.05);
     if (t >= stopAt) {
       stopAudio();
       announce(`第 ${currentSentIdx + 1} 句播放完畢`);
@@ -1405,8 +1447,8 @@ function reciteTimeUpdate() {
     return;
   }
   let local = 0;
-  for (let i = 0; i < RECITE_SEEK.length; i++) {
-    if (t >= RECITE_SEEK[i]) local = i;
+  for (let i = 0; i < R.SEEK.length; i++) {
+    if (t >= R.SEEK[i]) local = i;
     else break;
   }
   const targetIdx = firstIdx + local;
@@ -1506,12 +1548,13 @@ document.addEventListener('touchcancel', () => { if (isPressing) endLongPress();
 function prevSentence() {
   // 朗讀播放中：時間跳轉到上一句（不中斷音樂）
   if (currentVoice === '朗讀' && isPlaying && audio) {
+    const R = RECITE_MAP[dataset[currentSentIdx].poem.title];
     const local = dataset[currentSentIdx].localIdx;
     if (local <= 0) { announce('已經是本作品第一句'); return; }
     currentSentIdx--;
     renderSentence();
     requestAnimationFrame(fitFontSize);
-    audio.currentTime = RECITE_SEEK[dataset[currentSentIdx].localIdx];
+    audio.currentTime = R.SEEK[dataset[currentSentIdx].localIdx];
     reciteSingleMode = true;   // 切句後只播當前句，播完即停
     announce(`切換到第 ${currentSentIdx + 1} 句`);
     return;
@@ -1529,6 +1572,7 @@ function prevSentence() {
 function nextSentence() {
   // 朗讀播放中：時間跳轉到下一句（不中斷音樂）
   if (currentVoice === '朗讀' && isPlaying && audio) {
+    const R = RECITE_MAP[dataset[currentSentIdx].poem.title];
     const local = dataset[currentSentIdx].localIdx;
     if (local >= dataset[currentSentIdx].poem.sentences.length - 1) {
       announce('已經是本作品最後一句');
@@ -1537,7 +1581,7 @@ function nextSentence() {
     currentSentIdx++;
     renderSentence();
     requestAnimationFrame(fitFontSize);
-    audio.currentTime = RECITE_SEEK[dataset[currentSentIdx].localIdx];
+    audio.currentTime = R.SEEK[dataset[currentSentIdx].localIdx];
     reciteSingleMode = true;   // 切句後只播當前句，播完即停
     announce(`切換到第 ${currentSentIdx + 1} 句`);
     return;
