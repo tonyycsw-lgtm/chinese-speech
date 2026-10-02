@@ -844,7 +844,9 @@ const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 // 朗讀（真人錄音 00-朗誦.mp3）句時間表（秒）：報題 + 句1~8 字音區間
 const RECITE_START = [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.26, 30.06];
 const RECITE_END = [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76];
-const RECITE_STOP = 32.76;   // 播到第 8 句末自動停（其後為原檔結尾靜音）
+// 句播放起點 = 與上一句的中點（從停頓音樂中自然進入，不貼字音）
+const RECITE_SEEK = [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.26, 29.81];
+let reciteSingleMode = false;   // true：上/下句後只播當前句，人聲播完即停
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
 const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗讀'];
@@ -1346,8 +1348,10 @@ function startRecitePlayback() {
   audio = new Audio(poem.audioDir + '00-朗誦.mp3');
   audio.playbackRate = speedRate;
   const local = dataset[currentSentIdx].localIdx;
-  audio.currentTime = RECITE_START[local === 0 ? 0 : local + 1];
+  audio.currentTime = (local === 0 ? 0 : RECITE_SEEK[local]);
+  reciteSingleMode = false;   // 播放鍵 = 連續播完整檔
   audio.addEventListener('timeupdate', reciteTimeUpdate);
+  audio.onended = () => { stopAudio(); announce(`《${poem.title}》朗讀播放完畢`); };
   audio.onerror = () => { announce('朗讀音檔載入失敗'); stopAudio(); };
   audio.play().then(() => {
     isPlaying = true;
@@ -1359,15 +1363,18 @@ function startRecitePlayback() {
   });
 }
 
-// 朗讀播放中：跟隨進度切換高亮句；播到結尾自動停止
+// 朗讀播放中：單句模式播完當前句人聲即停；連續模式跟隨進度高亮（播完整檔含頭尾音樂）
 function reciteTimeUpdate() {
   if (!audio || !isPlaying) return;
   const poem = dataset[currentSentIdx].poem;
   const firstIdx = dataset.findIndex(s => s.poem === poem);
   const t = audio.currentTime;
-  if (t >= RECITE_STOP) {
-    stopAudio();
-    announce(`《${poem.title}》朗讀播放完畢`);
+  if (reciteSingleMode) {
+    const local = dataset[currentSentIdx].localIdx;
+    if (t >= RECITE_END[local + 1]) {
+      stopAudio();
+      announce(`第 ${currentSentIdx + 1} 句播放完畢`);
+    }
     return;
   }
   let local = 0;
@@ -1477,7 +1484,8 @@ function prevSentence() {
     currentSentIdx--;
     renderSentence();
     requestAnimationFrame(fitFontSize);
-    audio.currentTime = RECITE_START[local];
+    audio.currentTime = RECITE_SEEK[dataset[currentSentIdx].localIdx];
+    reciteSingleMode = true;   // 切句後只播當前句，播完即停
     announce(`切換到第 ${currentSentIdx + 1} 句`);
     return;
   }
@@ -1502,7 +1510,8 @@ function nextSentence() {
     currentSentIdx++;
     renderSentence();
     requestAnimationFrame(fitFontSize);
-    audio.currentTime = RECITE_START[local + 2];
+    audio.currentTime = RECITE_SEEK[dataset[currentSentIdx].localIdx];
+    reciteSingleMode = true;   // 切句後只播當前句，播完即停
     announce(`切換到第 ${currentSentIdx + 1} 句`);
     return;
   }
