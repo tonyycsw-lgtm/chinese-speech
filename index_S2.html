@@ -810,7 +810,7 @@ const POEMS = [
     audioDir: "./sound/春夜喜雨/",
     hasRecite: true,   // 具備分句朗讀音檔（00-朗讀.mp3 報題 + 01~NN-朗讀.mp3）
     pauseAfter: [0.7, 0.8, 0.7, 1.0, 0.7, 0.8, 0.7, 0],
-    recitePause: [0, 0, 0, 0.56, 0, 0, 0, 0],   // 真人朗讀句間停頓（段已含 0.7s 緩衝，僅補剩餘間隙）
+    recitePause: [0, 0, 0, 0, 0, 0, 0, 0],   // 真人朗讀：停頓音樂已併入段內，段間無縫相接（保持背景音樂連續）
     sentences: [
       {words:[{h:"好",p:"hǎo"},{h:"雨",p:"yǔ"},{h:"知",p:"zhī"},{h:"時",p:"shí"},{h:"節",p:"jié"},{h:"，",p:"",isPunc:true}]},
       {words:[{h:"當",p:"dāng"},{h:"春",p:"chūn"},{h:"乃",p:"nǎi"},{h:"發",p:"fā"},{h:"生",p:"shēng"},{h:"。",p:"",isPunc:true}]},
@@ -1334,9 +1334,7 @@ function startRecitePlayback() {
     const intro = new Audio(poem.audioDir + '00-朗讀.mp3');
     intro.playbackRate = speedRate;
     audio = intro;
-    audio.onended = () => {
-      setTimeout(() => { if (isPlaying) playFromCurrentSentence(); }, 1160);
-    };
+    audio.onended = () => { if (isPlaying) playFromCurrentSentence(); };
     audio.onerror = () => { announce('報題音檔載入失敗'); stopAudio(); };
     audio.play().then(() => {
       isPlaying = true;
@@ -1498,13 +1496,14 @@ function resetAll() {
   stopRecordPlayback();
   resumeAfterAction = false;
   resumeFromStart = false;
-  currentSentIdx = 0;
+  const curPoem = dataset[currentSentIdx].poem;
+  currentSentIdx = dataset.findIndex(s => s.poem === curPoem);   // 保留當前作品，回到其第一句
   speedPresetIdx = 1;
   speedRate = 1.0;
   document.getElementById('speedVal').textContent = '1.0';
   renderSentence();
   requestAnimationFrame(fitFontSize);
-  announce('已重置，回到第一句');
+  announce(`已重置，回到《${curPoem.title}》第一句`);
 }
 
 // ============================================================
