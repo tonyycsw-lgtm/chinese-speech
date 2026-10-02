@@ -1305,6 +1305,15 @@ function togglePlayAudio() {
   });
 }
 
+// ============================================================
+// 真人朗誦逐句定位（聽雪 00-朗誦.mp3，faster-whisper 對齊）
+// ============================================================
+const RECITE_START = [0.00, 5.00, 9.64, 14.00, 18.62, 24.34, 28.74, 36.64, 44.28, 48.78, 53.98, 57.38, 63.38, 68.02];
+const RECITE_END = [4.32, 9.64, 14.00, 18.62, 24.34, 28.74, 34.12, 42.48, 48.78, 52.28, 57.38, 62.68, 68.02, 75.10];
+const RECITE_SEEK = [0.00, 4.66, 9.64, 14.00, 18.62, 24.34, 28.74, 35.38, 43.38, 48.78, 53.13, 57.38, 63.03, 68.02];
+const TAIL_EXT = [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7];
+let reciteSingleMode = false;
+
 // 整首朗誦播放（音檔：00-朗誦.mp3；由「朗誦」音色觸發）
 function startRecitePlayback() {
   const sent = dataset[currentSentIdx];
@@ -1312,6 +1321,10 @@ function startRecitePlayback() {
 
   audio = new Audio(fullPath);
   audio.playbackRate = speedRate;
+  const local = sent.localIdx;
+  reciteSingleMode = (local !== 0);
+  audio.currentTime = RECITE_SEEK[local];
+  audio.addEventListener('timeupdate', reciteTimeUpdate);
   audio.onended = () => {
     isPlaying = false;
     playBtn.classList.remove('playing');
@@ -1331,6 +1344,32 @@ function startRecitePlayback() {
   }).catch(() => {
     announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
   });
+}
+
+// 朗誦 timeupdate：單句模式句尾停止（尾音完整、不侵入下句首字）；連續模式以 SEEK 跟蹤切句
+function reciteTimeUpdate() {
+  if (currentVoice !== '朗誦' || !audio) return;
+  const t = audio.currentTime;
+  const local = dataset[currentSentIdx].localIdx;
+  if (reciteSingleMode) {
+    const nextStart = (local + 1 < RECITE_START.length) ? RECITE_START[local + 1] : Infinity;
+    const stopAt = Math.min(RECITE_END[local] + TAIL_EXT[local], nextStart - 0.05);
+    if (t >= stopAt) {
+      stopAudio();
+      announce(`第 ${currentSentIdx + 1} 句播放完畢`);
+    }
+    return;
+  }
+  for (let i = dataset.length - 1; i >= 1; i--) {
+    if (t >= RECITE_SEEK[i]) {
+      if (currentSentIdx !== i) {
+        currentSentIdx = i;
+        renderSentence();
+        requestAnimationFrame(fitFontSize);
+      }
+      break;
+    }
+  }
 }
 
 // ============================================================
@@ -1420,6 +1459,16 @@ document.addEventListener('touchcancel', () => { if (isPressing) endLongPress();
 // 句子切換
 // ============================================================
 function prevSentence() {
+  if (currentVoice === '朗誦' && audio && isPlaying) {
+    if (currentSentIdx <= 0) { announce('已經是第一句'); return; }
+    currentSentIdx--;
+    reciteSingleMode = true;
+    audio.currentTime = RECITE_SEEK[currentSentIdx];
+    renderSentence();
+    requestAnimationFrame(fitFontSize);
+    announce(`切換到第 ${currentSentIdx + 1} 句`);
+    return;
+  }
   stopAudio();
   resumeAfterAction = false;
   resumeFromStart = false;
@@ -1431,6 +1480,16 @@ function prevSentence() {
 }
 
 function nextSentence() {
+  if (currentVoice === '朗誦' && audio && isPlaying) {
+    if (currentSentIdx >= dataset.length - 1) { announce('已經是最後一句'); return; }
+    currentSentIdx++;
+    reciteSingleMode = true;
+    audio.currentTime = RECITE_SEEK[currentSentIdx];
+    renderSentence();
+    requestAnimationFrame(fitFontSize);
+    announce(`切換到第 ${currentSentIdx + 1} 句`);
+    return;
+  }
   stopAudio();
   resumeAfterAction = false;
   resumeFromStart = false;
