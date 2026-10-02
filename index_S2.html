@@ -6,6 +6,7 @@
 <title>詩詞朗讀｜朗讀練習（無障礙版）</title>
 
 <link rel="icon" type="image/png" href="icon-s2-192.png" />
+<link rel="manifest" href="manifest_s2.json" />
 <meta name="theme-color" content="#000000" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -74,9 +75,8 @@ body.a11y-mode {
 * { box-sizing: border-box; cursor: default; }
 button { cursor: pointer; }
 
-html, body {
+html {
   margin: 0;
-  height: 100%;
 }
 
 body {
@@ -93,6 +93,14 @@ body {
   font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+/* 觸控裝置（手機／平板）：多留 80px 可滾動空間，上推頁面即收合瀏覽器網址欄；
+   控制列為 sticky 貼底，滾動時不移動；頂欄滾出、文字窗上擴 */
+@media (hover: none) and (pointer: coarse) {
+  body {
+    min-height: calc(100dvh + 80px);
+  }
 }
 
 .sr-only {
