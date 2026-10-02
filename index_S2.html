@@ -1378,11 +1378,11 @@ function reciteTimeUpdate() {
     return;
   }
   let local = 0;
-  for (let i = 0; i < RECITE_START.length; i++) {
-    if (t >= RECITE_START[i]) local = i;
+  for (let i = 0; i < RECITE_SEEK.length; i++) {
+    if (t >= RECITE_SEEK[i]) local = i;
     else break;
   }
-  const targetIdx = firstIdx + (local > 0 ? local - 1 : 0);
+  const targetIdx = firstIdx + local;
   if (targetIdx !== currentSentIdx) {
     currentSentIdx = targetIdx;
     renderSentence();
