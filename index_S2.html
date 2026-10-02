@@ -1393,7 +1393,8 @@ function reciteTimeUpdate() {
   const t = audio.currentTime;
   if (reciteSingleMode) {
     const local = dataset[currentSentIdx].localIdx;
-    if (t >= RECITE_END[local + 1]) {
+    // 停止點向後移 0.7s：讓句末字尾音完整飽滿才停
+    if (t >= RECITE_END[local + 1] + 0.7) {
       stopAudio();
       announce(`第 ${currentSentIdx + 1} 句播放完畢`);
     }
