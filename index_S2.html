@@ -359,9 +359,10 @@ ruby {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  /* 字卡間距收窄，讓長句在窄屏少折行、完整顯示在錄音鈕上方 */
-  margin: 0 4px;
-  padding: 4px 6px;
+  /* 字卡等寬：每字固定寬度，令等字數句的文字起點完全一致 */
+  width: 1.35em;
+  margin: 0 2px;
+  padding: 4px 0;
   font-size: var(--base-font-size);
   font-weight: bold;
   color: var(--text);
@@ -397,12 +398,14 @@ ruby.pressing rt { visibility: visible; }
   font-size: var(--base-font-size);
   font-weight: bold;
   color: var(--text);
-  display: inline-block;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 1.35em;
   line-height: 1.2;
   margin: 0 2px;
   flex-shrink: 0;
   vertical-align: baseline;
-  align-self: flex-end;
   padding-bottom: 0.55em;
 }
 
@@ -485,7 +488,7 @@ body.a11y-mode .speed-btn {
 
 body.a11y-mode .voice-btn.voice-reciting {
   border: 4px solid #FFD54F;
-  background: #C62828;
+  background: #1A237E;
   box-shadow: 0 0 0 2px #000 inset, 0 0 18px #FFD54F;
   transition: none;   /* 切到朗讀立即高亮，弱視學生即時可辨 */
 }
@@ -1359,7 +1362,8 @@ function startRecitePlayback() {
   audio.playbackRate = speedRate;
   const local = dataset[currentSentIdx].localIdx;
   audio.currentTime = (local === 0 ? 0 : RECITE_SEEK[local]);
-  reciteSingleMode = false;   // 播放鍵 = 連續播完整檔
+  // 首句：連續播完整檔；其他句（上/下句切換後）：只播當前句，播完即停
+  reciteSingleMode = (local !== 0);
   audio.addEventListener('timeupdate', reciteTimeUpdate);
   audio.onended = () => { stopAudio(); announce(`《${poem.title}》朗讀播放完畢`); };
   audio.onerror = () => { announce('朗讀音檔載入失敗'); stopAudio(); };
@@ -1420,7 +1424,7 @@ function fitFontSize() {
 
   let size = 72;
   while (size > 20) {
-    const charW = size * 1.2;
+    const charW = size * 1.45;   // 字卡等寬 1.35em＋間距，估算需同步
     const charsPerLine = Math.max(1, Math.floor(w / charW));
     const lines = Math.ceil(words / charsPerLine);
     const totalH = lines * size * 2.6;
