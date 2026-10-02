@@ -808,8 +808,9 @@ const POEMS = [
     title: "春夜喜雨",
     author: "杜甫",
     audioDir: "./sound/春夜喜雨/",
-    hasRecite: true,   // 具備整首朗誦音檔（00-朗誦.mp3）
+    hasRecite: true,   // 具備分句朗讀音檔（00-朗讀.mp3 報題 + 01~NN-朗讀.mp3）
     pauseAfter: [0.7, 0.8, 0.7, 1.0, 0.7, 0.8, 0.7, 0],
+    recitePause: [1.02, 1.26, 0.78, 1.96, 0.74, 0, 0.50, 0],   // 真人朗讀句間停頓（無額外）
     sentences: [
       {words:[{h:"好",p:"hǎo"},{h:"雨",p:"yǔ"},{h:"知",p:"zhī"},{h:"時",p:"shí"},{h:"節",p:"jié"},{h:"，",p:"",isPunc:true}]},
       {words:[{h:"當",p:"dāng"},{h:"春",p:"chūn"},{h:"乃",p:"nǎi"},{h:"發",p:"fā"},{h:"生",p:"shēng"},{h:"。",p:"",isPunc:true}]},
@@ -840,12 +841,12 @@ const INTER_SENTENCE_DELAY = 600;   // 無標記時預設停頓
 const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
 const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
-// 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗誦」為整首朗誦音檔）
-const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗誦'];
+// 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
+const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗讀'];
 let voiceIdx = 0;
 let currentVoice = VOICES[0];
 
-// 該詩是否具備整首朗誦音檔
+// 該詩是否具備朗讀音檔（報題 00-朗讀.mp3 ＋ 每句 NN-朗讀.mp3）
 function poemHasRecite(poem) {
   return poem.hasRecite === true;
 }
@@ -943,8 +944,7 @@ function toggleA11yMode() {
 // 音檔路徑（依所屬詩篇資料夾 + 段內序號）
 // ============================================================
 function getAudioFilename(localIdx, voice) {
-  // 「朗誦」為整首音檔，不分句
-  if (voice === '朗誦') return '00-朗誦.mp3';
+  // 「朗讀」與其他音色一致：按句分檔（NN-朗讀.mp3）；報題另有 00-朗讀.mp3
   const numStr = String(localIdx + 1).padStart(2, '0');
   return `${numStr}-${voice}.mp3`;
 }
@@ -974,9 +974,9 @@ function selectPoem(poemIdx) {
   currentSentIdx = dataset.findIndex(s => s.poem === poem);
   renderSentence();
   requestAnimationFrame(fitFontSize);
-  // 切換後若所選詩沒有「朗誦」音檔，自動跳回第一個音色
+  // 切換後若所選詩沒有「朗讀」音檔，自動跳回第一個音色
   if (sanitizeVoice()) {
-    announce(`已切換至《${poem.title}》，此作品沒有朗誦音檔，已切回 ${currentVoice}`);
+    announce(`已切換至《${poem.title}》，此作品沒有朗讀音檔，已切回 ${currentVoice}`);
   } else {
     announce(`已切換至《${poem.title}》`);
   }
@@ -996,10 +996,10 @@ function cycleVoice() {
   stopAudio();
   const poem = dataset[currentSentIdx].poem;
   let next = voiceIdx;
-  // 當前詩沒有朗誦音檔時，循環跳過「朗誦」
+  // 當前詩沒有朗讀音檔時，循環跳過「朗讀」
   for (let i = 0; i < VOICES.length; i++) {
     next = (next + 1) % VOICES.length;
-    if (VOICES[next] !== '朗誦' || poemHasRecite(poem)) break;
+    if (VOICES[next] !== '朗讀' || poemHasRecite(poem)) break;
   }
   voiceIdx = next;
   currentVoice = VOICES[voiceIdx];
@@ -1012,10 +1012,10 @@ function cycleVoice() {
   announce(`已切換音色為 ${currentVoice}`);
 }
 
-// 目前詩沒有「朗誦」音檔時，把音色重置回第一個；回傳是否已變更
+// 目前詩沒有「朗讀」音檔時，把音色重置回第一個；回傳是否已變更
 function sanitizeVoice() {
   const poem = dataset[currentSentIdx].poem;
-  if (currentVoice === '朗誦' && !poemHasRecite(poem)) {
+  if (currentVoice === '朗讀' && !poemHasRecite(poem)) {
     voiceIdx = 0;
     currentVoice = VOICES[0];
     updateVoiceLabel();
@@ -1249,11 +1249,17 @@ function playNextInSequence() {
   renderSentence();
   requestAnimationFrame(fitFontSize);
 
-  // 依作品文字檔的停頓標記決定下一句前等待時間
+  // 依作品文字檔的停頓標記決定下一句前等待時間；
+  // 「朗讀」音色改用真人朗讀的句間停頓（recitePause），0 表示立即接下一句（無額外停頓）
   const sent = dataset[finishedIdx];
-  let delay = sent.pauseAfterMs;
-  if (delay <= 0) {
-    delay = (finishedIdx < dataset.length - 1) ? POEM_BOUNDARY_DELAY : INTER_SENTENCE_DELAY;
+  let delay;
+  if (currentVoice === '朗讀') {
+    delay = Math.round((sent.poem.recitePause[sent.localIdx] || 0) * 1000);
+  } else {
+    delay = sent.pauseAfterMs;
+    if (delay <= 0) {
+      delay = (finishedIdx < dataset.length - 1) ? POEM_BOUNDARY_DELAY : INTER_SENTENCE_DELAY;
+    }
   }
 
   setTimeout(() => {
@@ -1288,10 +1294,10 @@ function togglePlayAudio() {
 
   stopAudio();
 
-  // 「朗誦」音色：播放整首朗誦音檔（不分句連續播放）
-  if (currentVoice === '朗誦') {
+  // 「朗讀」音色：先報題（00-朗讀.mp3）再逐句連續播放
+  if (currentVoice === '朗讀') {
     if (!poemHasRecite(dataset[currentSentIdx].poem)) {
-      announce('此作品沒有朗誦音檔');
+      announce('此作品沒有朗讀音檔');
       return;
     }
     startRecitePlayback();
@@ -1316,29 +1322,41 @@ function togglePlayAudio() {
   });
 }
 
-// 整首朗誦播放（音檔：00-朗誦.mp3；由「朗誦」音色觸發）
+// 朗讀播放（分句）：從詩首句開始時先播報題 00-朗讀.mp3，再逐句 NN-朗讀.mp3
 function startRecitePlayback() {
-  const sent = dataset[currentSentIdx];
-  const fullPath = sent.poem.audioDir + getAudioFilename(sent.localIdx, currentVoice);
+  const poem = dataset[currentSentIdx].poem;
+  if (dataset[currentSentIdx].localIdx === 0) {
+    const intro = new Audio(poem.audioDir + '00-朗讀.mp3');
+    intro.playbackRate = speedRate;
+    audio = intro;
+    audio.onended = () => { playFromCurrentSentence(); };
+    audio.onerror = () => { announce('報題音檔載入失敗'); stopAudio(); };
+    audio.play().then(() => {
+      isPlaying = true;
+      playBtn.classList.add('playing');
+      updatePlayIcon();
+      announce(`播放《${poem.title}》朗讀`);
+    }).catch(() => {
+      announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
+    });
+    return;
+  }
+  playFromCurrentSentence();
+}
 
-  audio = new Audio(fullPath);
-  audio.playbackRate = speedRate;
-  audio.onended = () => {
-    isPlaying = false;
-    playBtn.classList.remove('playing');
-    updatePlayIcon();
-    announce(`《${sent.poem.title}》朗誦播放完畢`);
-  };
+// 從當前句開始逐句播放（朗讀音色）
+function playFromCurrentSentence() {
+  createAudioForCurrentSentence();
+  audio.onended = () => { playNextInSequence(); };
   audio.onerror = () => {
-    announce('朗誦音檔載入失敗');
+    announce('朗讀音檔載入失敗');
     stopAudio();
   };
-
   audio.play().then(() => {
     isPlaying = true;
     playBtn.classList.add('playing');
     updatePlayIcon();
-    announce(`播放《${sent.poem.title}》朗誦`);
+    announce(`播放第 ${currentSentIdx + 1} 段 ${currentVoice}`);
   }).catch(() => {
     announce('播放被瀏覽器攔截，請點擊頁面後再按播放');
   });
@@ -1833,11 +1851,14 @@ async function preloadAllAudio() {
   const urls = [];
   POEMS.forEach((poem) => {
     const dir = new URL(poem.audioDir, location.href).href;
-    if (poem.hasRecite) urls.push(dir + '00-朗誦.mp3');
     const n = poem.sentences.length;
     ['Male-A', 'Male-B', 'Female-A'].forEach((v) => {
       for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-' + v + '.mp3');
     });
+    if (poem.hasRecite) {
+      urls.push(dir + '00-朗讀.mp3');
+      for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-朗讀.mp3');
+    }
   });
   const list = [...new Set(urls)];
   if (!list.length) return;
