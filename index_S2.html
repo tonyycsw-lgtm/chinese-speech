@@ -1393,8 +1393,10 @@ function reciteTimeUpdate() {
   const t = audio.currentTime;
   if (reciteSingleMode) {
     const local = dataset[currentSentIdx].localIdx;
-    // 停止點向後移 0.7s：讓句末字尾音完整飽滿才停
-    if (t >= RECITE_END[local + 1] + 0.7) {
+    // 停止點 = 字音終點 +0.7s（尾音完整），但不侵入下一句首字（預留 0.05s 緩衝）
+    const nextStart = (local + 2 < RECITE_START.length) ? RECITE_START[local + 2] : Infinity;
+    const stopAt = Math.min(RECITE_END[local + 1] + 0.7, nextStart - 0.05);
+    if (t >= stopAt) {
       stopAudio();
       announce(`第 ${currentSentIdx + 1} 句播放完畢`);
     }
