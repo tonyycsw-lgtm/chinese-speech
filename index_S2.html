@@ -1728,7 +1728,9 @@ async function startPressRecording() {
     recordState = 'idle';
     stopVolumeMeter();
     updateRecordFabUI();
-    announce('無法存取麥克風，請確認已允許麥克風權限');
+    const name = err && err.name;
+    const denied = (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError');
+    announce(denied ? '麥克風權限被拒，請在瀏覽器／手機設定中允許麥克風後重試' : '無法存取麥克風，請確認已允許麥克風權限');
   }
 }
 
@@ -1878,22 +1880,9 @@ function stopRecordPlayback() {
 
 // ============================================================
 // 錄音按鈕手勢（按住錄音、放開播放；新錄音自動覆蓋舊錄音）
+// PointerEvent 主路徑＋後備：capture 容錯、全域 pointerup、無 PointerEvent 用 touch
 // ============================================================
-recordFab.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  mainPointerId = e.pointerId;
-  recordFab.setPointerCapture(e.pointerId);
-  startPressRecording();
-});
-
-recordFab.addEventListener('pointerup', (e) => {
-  if (e.pointerId !== mainPointerId) return;
-  e.preventDefault();
-  mainPointerId = null;
-  finishPressRecording();
-});
-
-recordFab.addEventListener('pointercancel', () => {
+function cancelPressRecording() {
   mainPointerId = null;
   pressActive = false;
   playAfterStop = false;
@@ -1905,7 +1894,43 @@ recordFab.addEventListener('pointercancel', () => {
     updateRecordFabUI();
   }
   stopVolumeMeter();
-});
+}
+
+if (window.PointerEvent) {
+  recordFab.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    mainPointerId = e.pointerId;
+    try { recordFab.setPointerCapture(e.pointerId); } catch (err) { /* 舊瀏覽器可忽略 */ }
+    startPressRecording();
+  });
+
+  recordFab.addEventListener('pointerup', (e) => {
+    if (e.pointerId !== mainPointerId) return;
+    e.preventDefault();
+    mainPointerId = null;
+    finishPressRecording();
+  });
+
+  // 後備：capture 失敗或手指滑出按鈕時，全域 pointerup 也能結束錄音
+  document.addEventListener('pointerup', (e) => {
+    if (e.pointerId !== mainPointerId) return;
+    mainPointerId = null;
+    finishPressRecording();
+  });
+
+  recordFab.addEventListener('pointercancel', cancelPressRecording);
+} else {
+  // 舊／內置瀏覽器（無 PointerEvent）：以觸控事件操作
+  recordFab.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startPressRecording();
+  }, { passive: false });
+  recordFab.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    finishPressRecording();
+  }, { passive: false });
+  recordFab.addEventListener('touchcancel', cancelPressRecording);
+}
 
 // ============================================================
 // 頁面關閉時釋放麥克風串流
