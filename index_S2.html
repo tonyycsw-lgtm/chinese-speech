@@ -1693,7 +1693,7 @@ async function startPressRecording() {
   // iOS Safari：在 user gesture 中播放無聲音頻解鎖，允許稍後播放錄音 blob
   try {
     const unlock = new Audio();
-    unlock.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+    unlock.src = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
     unlock.volume = 0.001;
     unlock.play().catch(() => {});
   } catch (unlockErr) { /* 可忽略 */ }
@@ -1771,16 +1771,37 @@ async function startPressRecording() {
         updateRecordFabUI();
         return;
       }
+      const chunksSize = recordedChunks.reduce((sum, b) => sum + b.size, 0);
+      if (chunksSize === 0) {
+        recordState = 'idle';
+        updateRecordFabUI();
+        showMicToast('錄音失敗（沒有錄到聲音），請再試一次', 4000);
+        return;
+      }
       const mrType = mediaRecorder && mediaRecorder.mimeType;
       recordedBlob = new Blob(recordedChunks, mrType ? { type: mrType.split(';')[0] } : undefined);
-      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-      recordedUrl = URL.createObjectURL(recordedBlob);
-      recordState = 'hasRecording';
-      updateRecordFabUI();
-      if (playAfterStop) {
-        playAfterStop = false;
-        playRecording();
-      }
+      if (recordedUrl && recordedUrl.startsWith('blob:')) URL.revokeObjectURL(recordedUrl);
+      // Safari 對 blob URL 播放有已知問題：改用 data URL（Android 亦相容）
+      const fr = new FileReader();
+      fr.onload = () => {
+        recordedUrl = fr.result;
+        recordState = 'hasRecording';
+        updateRecordFabUI();
+        if (playAfterStop) {
+          playAfterStop = false;
+          playRecording();
+        }
+      };
+      fr.onerror = () => {
+        recordedUrl = URL.createObjectURL(recordedBlob);
+        recordState = 'hasRecording';
+        updateRecordFabUI();
+        if (playAfterStop) {
+          playAfterStop = false;
+          playRecording();
+        }
+      };
+      fr.readAsDataURL(recordedBlob);
     };
 
     mediaRecorder.start();
