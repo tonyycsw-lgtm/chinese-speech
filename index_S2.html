@@ -992,6 +992,9 @@ let volRaf = null;
 // 錄音按鈕手勢狀態（按住錄音、放開播放）
 let mainPointerId = null;
 let pressActive = false;
+let tapPending = false;      // 有舊錄音時：輕點→播放，長按→重錄
+let pressStartTs = 0;
+let tapTimer = null;
 let playAfterStop = false;
 let discardAfterStop = false;
 
@@ -1943,7 +1946,7 @@ function playRecording() {
     announce('播放您的錄音');
   }).catch((err) => {
     console.error(err);
-    showMicToast('播放失敗，請再試一次', 4000);
+    showMicToast('自動播放被攔截：請輕點錄音鍵播放', 5000);
     recordState = 'hasRecording';
     updateRecordFabUI();
   });
@@ -1968,6 +1971,9 @@ function stopRecordPlayback() {
 // ============================================================
 function cancelPressRecording() {
   mainPointerId = null;
+  clearTimeout(tapTimer);
+  tapTimer = null;
+  tapPending = false;
   pressActive = false;
   playAfterStop = false;
   discardAfterStop = true;
@@ -1985,6 +1991,16 @@ if (window.PointerEvent) {
     e.preventDefault();
     mainPointerId = e.pointerId;
     try { recordFab.setPointerCapture(e.pointerId); } catch (err) { /* 舊瀏覽器可忽略 */ }
+    pressStartTs = Date.now();
+    if (recordState === 'hasRecording') {
+      // 有舊錄音：輕點＝播放（iOS 點擊環境內播放），按住≥350ms＝重新錄音
+      tapPending = true;
+      tapTimer = setTimeout(() => {
+        tapPending = false;
+        startPressRecording();
+      }, 350);
+      return;
+    }
     startPressRecording();
   });
 
@@ -1992,13 +2008,27 @@ if (window.PointerEvent) {
     if (e.pointerId !== mainPointerId) return;
     e.preventDefault();
     mainPointerId = null;
+    clearTimeout(tapTimer);
+    tapTimer = null;
+    if (tapPending) {
+      tapPending = false;
+      playRecording();
+      return;
+    }
     finishPressRecording();
   });
 
-  // 後備：capture 失敗或手指滑出按鈕時，全域 pointerup 也能結束錄音
+  // 後備：capture 失敗或手指滑出按鈕時，全域 pointerup 也能結束
   document.addEventListener('pointerup', (e) => {
     if (e.pointerId !== mainPointerId) return;
     mainPointerId = null;
+    clearTimeout(tapTimer);
+    tapTimer = null;
+    if (tapPending) {
+      tapPending = false;
+      playRecording();
+      return;
+    }
     finishPressRecording();
   });
 
@@ -2007,10 +2037,26 @@ if (window.PointerEvent) {
   // 舊／內置瀏覽器（無 PointerEvent）：以觸控事件操作
   recordFab.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    pressStartTs = Date.now();
+    if (recordState === 'hasRecording') {
+      tapPending = true;
+      tapTimer = setTimeout(() => {
+        tapPending = false;
+        startPressRecording();
+      }, 350);
+      return;
+    }
     startPressRecording();
   }, { passive: false });
   recordFab.addEventListener('touchend', (e) => {
     e.preventDefault();
+    clearTimeout(tapTimer);
+    tapTimer = null;
+    if (tapPending) {
+      tapPending = false;
+      playRecording();
+      return;
+    }
     finishPressRecording();
   }, { passive: false });
   recordFab.addEventListener('touchcancel', cancelPressRecording);
