@@ -2004,6 +2004,25 @@ function stopRecordPlayback() {
 }
 
 // ============================================================
+// 麥克風首次點擊預先授權
+// 瀏覽器政策：getUserMedia 需在 user gesture 中請求，頁面載入自動請求會被拒。
+// 首次點擊頁面任意處（非錄音鍵）時預先請求權限，允許後立即釋放；之後錄音不再彈權限窗。
+// ============================================================
+let micPreauthTried = false;
+function preauthorizeMic(e) {
+  if (micPreauthTried) return;
+  const t = e.target;
+  if (t && t.closest && t.closest('.record-fab')) return; // 錄音鍵自己處理
+  micPreauthTried = true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then((s) => { try { s.getTracks().forEach((tk) => tk.stop()); } catch (stopErr) {} })
+    .catch(() => {});
+}
+document.addEventListener('pointerdown', preauthorizeMic);
+document.addEventListener('touchstart', preauthorizeMic);
+
+// ============================================================
 // 錄音按鈕手勢（按住錄音、放開播放；新錄音自動覆蓋舊錄音）
 // PointerEvent 主路徑＋後備：capture 容錯、全域 pointerup、無 PointerEvent 用 touch
 // ============================================================
