@@ -982,6 +982,10 @@ let recordedBlob = null;
 let recordedUrl = null;
 let recordState = 'idle';
 let recordAudioEl = null;
+let recordCtxSrc = null;
+// iPadOS 13+ 的 UA 是 Macintosh，需用觸控點數判斷；iPhone/iPad 舊版直接匹配
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let recordStream = null;
 
 // 音量分析（錄音時即時音量）
@@ -1929,7 +1933,38 @@ function playRecording() {
     updateRecordFabUI();
     return;
   }
+  if (isIOS) {
+    // iOS：AudioContext 解碼播放（WebKit 對錄音 mp4 最可靠）；失敗再退回 Audio 元素
+    playRecordingViaCtx().catch(() => playRecordingAudioEl());
+    return;
+  }
+  playRecordingAudioEl();
+}
 
+async function playRecordingViaCtx() {
+  if (!recordedBlob) throw new Error('no-recording-blob');
+  stopRecordPlayback();
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  const buf = await recordedBlob.arrayBuffer();
+  const decoded = await audioCtx.decodeAudioData(buf);
+  const src = audioCtx.createBufferSource();
+  src.buffer = decoded;
+  src.connect(audioCtx.destination);
+  src.onended = () => {
+    if (recordCtxSrc === src) recordCtxSrc = null;
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  };
+  recordCtxSrc = src;
+  recordState = 'playingBack';
+  updateRecordFabUI();
+  announce('播放您的錄音');
+  src.start();
+}
+
+function playRecordingAudioEl() {
+  stopRecordPlayback();
   recordAudioEl = new Audio(recordedUrl);
   recordAudioEl.onended = () => {
     recordState = 'hasRecording';
@@ -1958,6 +1993,10 @@ function stopRecordPlayback() {
     recordAudioEl.onended = null;
     recordAudioEl.onerror = null;
     recordAudioEl = null;
+  }
+  if (recordCtxSrc) {
+    try { recordCtxSrc.stop(); } catch (stopErr) {}
+    recordCtxSrc = null;
   }
   if (recordState === 'playingBack') {
     recordState = 'hasRecording';
