@@ -1788,27 +1788,13 @@ async function startPressRecording() {
       const mrType = mediaRecorder && mediaRecorder.mimeType;
       recordedBlob = new Blob(recordedChunks, mrType ? { type: mrType.split(';')[0] } : undefined);
       if (recordedUrl && recordedUrl.startsWith('blob:')) URL.revokeObjectURL(recordedUrl);
-      // Safari 對 blob URL 播放有已知問題：改用 data URL（Android 亦相容）
-      const fr = new FileReader();
-      fr.onload = () => {
-        recordedUrl = fr.result;
-        recordState = 'hasRecording';
-        updateRecordFabUI();
-        if (playAfterStop) {
-          playAfterStop = false;
-          playRecording();
-        }
-      };
-      fr.onerror = () => {
-        recordedUrl = URL.createObjectURL(recordedBlob);
-        recordState = 'hasRecording';
-        updateRecordFabUI();
-        if (playAfterStop) {
-          playAfterStop = false;
-          playRecording();
-        }
-      };
-      fr.readAsDataURL(recordedBlob);
+      recordedUrl = URL.createObjectURL(recordedBlob);
+      recordState = 'hasRecording';
+      updateRecordFabUI();
+      if (playAfterStop) {
+        playAfterStop = false;
+        playRecording();
+      }
     };
 
     mediaRecorder.start();
@@ -1934,8 +1920,9 @@ function playRecording() {
     return;
   }
   if (isIOS) {
-    // iOS：AudioContext 解碼播放（WebKit 對錄音 mp4 最可靠）；失敗再退回 Audio 元素
-    playRecordingViaCtx().catch(() => playRecordingAudioEl());
+    // iOS：原生 Audio 元素 + blob URL（輕點 gesture 內播放，速度正常無雜音）
+    // 失敗時後備 AudioContext 解碼播放
+    playRecordingAudioEl({ fallbackCtx: true });
     return;
   }
   playRecordingAudioEl();
@@ -1963,17 +1950,25 @@ async function playRecordingViaCtx() {
   src.start();
 }
 
-function playRecordingAudioEl() {
+function playRecordingAudioEl(opts) {
   stopRecordPlayback();
+  const fb = opts && opts.fallbackCtx;
+  const fbFail = () => {
+    showMicToast('播放錄音失敗，請再試一次', 4000);
+    recordState = 'hasRecording';
+    updateRecordFabUI();
+  };
   recordAudioEl = new Audio(recordedUrl);
   recordAudioEl.onended = () => {
     recordState = 'hasRecording';
     updateRecordFabUI();
   };
   recordAudioEl.onerror = () => {
-    showMicToast('播放錄音失敗，請再試一次', 4000);
-    recordState = 'hasRecording';
-    updateRecordFabUI();
+    if (fb) {
+      playRecordingViaCtx().catch(fbFail);
+      return;
+    }
+    fbFail();
   };
   recordAudioEl.play().then(() => {
     recordState = 'playingBack';
@@ -1981,6 +1976,10 @@ function playRecordingAudioEl() {
     announce('播放您的錄音');
   }).catch((err) => {
     console.error(err);
+    if (fb) {
+      playRecordingViaCtx().catch(fbFail);
+      return;
+    }
     showMicToast('自動播放被攔截：請輕點錄音鍵播放', 5000);
     recordState = 'hasRecording';
     updateRecordFabUI();
