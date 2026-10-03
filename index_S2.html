@@ -699,11 +699,36 @@ body.a11y-mode .volume-meter {
 }
 
 body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
+
+/* 可見提示橫幅（錯誤／權限指引），大字形、高對比、自動消失 */
+.mic-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  max-width: 88%;
+  padding: 16px 22px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+.mic-toast.show { opacity: 1; }
+body.a11y-mode .mic-toast { font-size: 28px; }
 </style>
 </head>
 <body>
 
 <div aria-live="polite" class="sr-only" id="a11y-status"></div>
+<div class="mic-toast" id="micToast" role="alert"></div>
 
 <header class="top-setting-bar">
   <h1>詩詞朗讀｜朗讀練習</h1>
@@ -986,6 +1011,16 @@ const volumeMeter = document.getElementById('volumeMeter');
 let volSegs = [];
 
 function announce(msg) { statusBox.textContent = msg; }
+
+let micToastTimer = null;
+function showMicToast(msg, ms) {
+  const t = document.getElementById('micToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(micToastTimer);
+  micToastTimer = setTimeout(() => t.classList.remove('show'), ms || 5000);
+}
 
 // ============================================================
 // 模式切換
@@ -1674,6 +1709,24 @@ async function startPressRecording() {
                           recordStream.getAudioTracks().some(t => t.readyState === 'live');
 
     if (!hasLiveStream) {
+      // 預檢權限：被瀏覽器封鎖時直接指引設定，不等待 getUserMedia 失敗
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const st = await navigator.permissions.query({ name: 'microphone' });
+          if (st.state === 'denied') {
+            throw new Error('mic-perm-denied');
+          }
+        }
+      } catch (permErr) {
+        if (permErr && permErr.message === 'mic-perm-denied') {
+          recordState = 'idle';
+          try { stopVolumeMeter(); } catch (e2) {}
+          try { updateRecordFabUI(); } catch (e2) {}
+          showMicToast('麥克風權限已被封鎖：請在 Chrome 設定 → 網站設定 → 麥克風，改為「允許」後再試', 7000);
+          return;
+        }
+        // permissions.query 本身不支援時忽略，繼續嘗試 getUserMedia
+      }
       recordStream = await Promise.race([
         navigator.mediaDevices.getUserMedia({ audio: true }),
         new Promise((_, rej) => setTimeout(() => rej(new Error('mic-timeout')), 8000))
@@ -1726,11 +1779,11 @@ async function startPressRecording() {
   } catch (err) {
     console.error(err);
     recordState = 'idle';
-    stopVolumeMeter();
-    updateRecordFabUI();
+    try { stopVolumeMeter(); } catch (e2) {}
+    try { updateRecordFabUI(); } catch (e2) {}
     const name = err && err.name;
     const denied = (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError');
-    announce(denied ? '麥克風權限被拒，請在瀏覽器／手機設定中允許麥克風後重試' : '無法存取麥克風，請確認已允許麥克風權限');
+    showMicToast(denied ? '麥克風權限被拒：請在瀏覽器／手機設定中允許麥克風後重試' : '無法存取麥克風，請確認已允許麥克風權限', 6000);
   }
 }
 
