@@ -1690,6 +1690,14 @@ function updateRecordFabUI() {
 async function startPressRecording() {
   pressActive = true;
 
+  // iOS Safari：在 user gesture 中播放無聲音頻解鎖，允許稍後播放錄音 blob
+  try {
+    const unlock = new Audio();
+    unlock.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+    unlock.volume = 0.001;
+    unlock.play().catch(() => {});
+  } catch (unlockErr) { /* 可忽略 */ }
+
   // 錄音前先停止朗讀與舊錄音播放
   if (isPlaying) stopAudio();
   stopRecordPlayback();
@@ -1763,7 +1771,8 @@ async function startPressRecording() {
         updateRecordFabUI();
         return;
       }
-      recordedBlob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
+      const mrType = mediaRecorder && mediaRecorder.mimeType;
+      recordedBlob = new Blob(recordedChunks, mrType ? { type: mrType.split(';')[0] } : undefined);
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
       recordedUrl = URL.createObjectURL(recordedBlob);
       recordState = 'hasRecording';
@@ -1903,7 +1912,7 @@ function playRecording() {
     updateRecordFabUI();
   };
   recordAudioEl.onerror = () => {
-    announce('播放錄音失敗');
+    showMicToast('播放錄音失敗，請再試一次', 4000);
     recordState = 'hasRecording';
     updateRecordFabUI();
   };
@@ -1911,8 +1920,9 @@ function playRecording() {
     recordState = 'playingBack';
     updateRecordFabUI();
     announce('播放您的錄音');
-  }).catch(() => {
-    announce('播放失敗');
+  }).catch((err) => {
+    console.error(err);
+    showMicToast('播放失敗，請再試一次', 4000);
     recordState = 'hasRecording';
     updateRecordFabUI();
   });
