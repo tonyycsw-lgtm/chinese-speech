@@ -830,7 +830,7 @@ const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
 const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗誦」為整首朗誦音檔）
-const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗誦'];
+const VOICES = ['Male-A', 'Male-B', 'Female', '朗誦'];
 let voiceIdx = 0;
 let currentVoice = VOICES[0];
 
@@ -1883,7 +1883,7 @@ async function preloadAllAudio() {
     const dir = new URL(poem.audioDir, location.href).href;
     if (poem.hasRecite) urls.push(dir + '00-朗誦.mp3');
     const n = poem.sentences.length;
-    ['Male-A', 'Male-B', 'Female-A'].forEach((v) => {
+    ['Male-A', 'Male-B', 'Female'].forEach((v) => {
       for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-' + v + '.mp3');
     });
   });

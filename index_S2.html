@@ -939,7 +939,7 @@ const RECITE_MAP = {
 let reciteSingleMode = false;   // true：上/下句後只播當前句，人聲播完即停
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
-const VOICES = ['Male-A', 'Male-B', 'Female-A', '朗讀'];
+const VOICES = ['Male-A', 'Male-B', 'Female', '朗讀'];
 let savedVoiceIdx = parseInt(localStorage.getItem('voiceIdx') || '0', 10);
 let voiceIdx = (savedVoiceIdx >= 0 && savedVoiceIdx < VOICES.length) ? savedVoiceIdx : 0;
 let currentVoice = VOICES[voiceIdx];
@@ -2205,7 +2205,7 @@ async function preloadAllAudio() {
   POEMS.forEach((poem) => {
     const dir = new URL(poem.audioDir, location.href).href;
     const n = poem.sentences.length;
-    ['Male-A', 'Male-B', 'Female-A'].forEach((v) => {
+    ['Male-A', 'Male-B', 'Female'].forEach((v) => {
       for (let i = 1; i <= n; i++) urls.push(dir + String(i).padStart(2, '0') + '-' + v + '.mp3');
     });
     if (poem.hasRecite) urls.push(dir + '00-朗誦.mp3');
