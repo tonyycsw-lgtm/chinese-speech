@@ -827,6 +827,33 @@ body.a11y-mode .mic-toast { font-size: 28px; }
 // 防長按／右鍵彈出瀏覽器選單（重新載入、下載、列印、分享等）
 document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
+// ===== 臨時診斷：捕獲 JS 錯誤並顯示在頁面頂部（iPad 排障用，之後移除） =====
+window.addEventListener('error', (e) => {
+  if (e.target !== window) return;
+  try {
+    let el = document.getElementById('diagErr');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'diagErr';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
+      document.body.appendChild(el);
+    }
+    el.textContent += 'ERR: ' + (e.message || '') + ' @line ' + (e.lineno || '?') + '\n';
+  } catch (err) {}
+});
+window.addEventListener('unhandledrejection', (e) => {
+  try {
+    let el = document.getElementById('diagErr');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'diagErr';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
+      document.body.appendChild(el);
+    }
+    el.textContent += 'PROMISE: ' + ((e.reason && e.reason.message) ? e.reason.message : String(e.reason)) + '\n';
+  } catch (err) {}
+});
+
 // ============================================================
 // 三首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫）＋ 聽雪（金波），共 30 段
 // pauseAfter：各句播完後的停頓秒數（取自作品文字檔的 <#X#> 標記）
