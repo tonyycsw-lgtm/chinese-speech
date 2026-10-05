@@ -99,6 +99,7 @@ body {
    控制列為 sticky 貼底，滾動時不移動；頂欄滾出、文字窗上擴 */
 @media (hover: none) and (pointer: coarse) {
   body {
+    min-height: calc(100vh + 80px);
     min-height: calc(100dvh + 80px);
   }
 }
@@ -827,7 +828,19 @@ body.a11y-mode .mic-toast { font-size: 28px; }
 // 防長按／右鍵彈出瀏覽器選單（重新載入、下載、列印、分享等）
 document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-// ===== 臨時診斷：捕獲 JS 錯誤並顯示在頁面頂部（iPad 排障用，之後移除） =====
+// ===== 臨時診斷：顯示 JS 執行進度＋錯誤（iPad 排障用，之後移除） =====
+function diag(msg) {
+  try {
+    let el = document.getElementById('diagErr');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'diagErr';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#a60;color:#fff;font:600 15px/1.5 sans-serif;padding:8px;white-space:pre-wrap;word-break:break-all;max-height:45vh;overflow:auto';
+      document.body.appendChild(el);
+    }
+    el.textContent += '[' + msg + '] ';
+  } catch (err) {}
+}
 window.addEventListener('error', (e) => {
   if (e.target !== window) return;
   try {
@@ -838,6 +851,7 @@ window.addEventListener('error', (e) => {
       el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
       document.body.appendChild(el);
     }
+    el.style.background = '#900';
     el.textContent += 'ERR: ' + (e.message || '') + ' @line ' + (e.lineno || '?') + '\n';
   } catch (err) {}
 });
@@ -850,6 +864,7 @@ window.addEventListener('unhandledrejection', (e) => {
       el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
       document.body.appendChild(el);
     }
+    el.style.background = '#900';
     el.textContent += 'PROMISE: ' + ((e.reason && e.reason.message) ? e.reason.message : String(e.reason)) + '\n';
   } catch (err) {}
 });
@@ -931,6 +946,7 @@ POEMS.forEach((poem) => {
     });
   });
 });
+diag('data-ok');
 
 const INTER_SENTENCE_DELAY = 600;   // 無標記時預設停頓
 const POEM_BOUNDARY_DELAY = 1200;   // 跨詩篇時停頓（保留相容）
@@ -991,6 +1007,7 @@ let audio = null;
 let isPlaying = false;
 let a11yMode = false;
 try { a11yMode = localStorage.getItem('a11yMode') === 'true'; } catch (e) {}
+diag('vars-ok');
 
 // 操作後續播標記
 let resumeAfterAction = false;
@@ -2196,6 +2213,7 @@ document.addEventListener('click', () => {
 // ============================================================
 // 初始化
 // ============================================================
+diag('init-begin');
 if (POEMS.length < 2) {
   // 只有一個作品時不顯示作品選擇按鈕
   const sel = document.querySelector('.poem-selector');
@@ -2203,12 +2221,14 @@ if (POEMS.length < 2) {
 }
 applyMode();
 renderSentence();
+diag('render-done');
 fitFontSize();   // 同步首跑：保證第 1 句載入即正確字號（與其他句一致）
 updatePlayIcon();
 updateVoiceLabel();
 buildVolumeMeter();
 updateRecordFabUI();
 positionFab();
+diag('init-done');
 requestAnimationFrame(() => {
   fitFontSize();
   positionFab();
