@@ -724,6 +724,9 @@ body.a11y-mode .record-fab .fab-icon { width: 54px; height: 54px; }
 }
 .mic-toast.show { opacity: 1; }
 body.a11y-mode .mic-toast { font-size: 28px; }
+
+/* 診斷覆蓋層絕不攔截點擊（避免除錯面板本身造成「按鈕沒反應」） */
+#diagErr, #diagVer { pointer-events: none; }
 </style>
 </head>
 <body>
@@ -827,49 +830,49 @@ body.a11y-mode .mic-toast { font-size: 28px; }
 
 
 <script>
+// 相容性看門狗：獨立於主程式之外，主程式若「解析失敗」也能回報（iPad 排障用）
+(function () {
+  window.__S2_MAIN_OK__ = false;
+  function panel(bg) {
+    var el = document.getElementById('diagErr');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'diagErr';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto;pointer-events:none';
+      (document.body || document.documentElement).appendChild(el);
+    }
+    if (bg) el.style.background = bg;
+    return el;
+  }
+  window.__s2Panel = panel;
+  window.addEventListener('error', function (e) {
+    if (e.target !== window) return;
+    try { panel('#900').textContent += 'ERR: ' + (e.message || '') + ' @' + (e.filename || '') + ':' + (e.lineno || '?') + '\n'; } catch (x) {}
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    try { panel('#900').textContent += 'PROMISE: ' + ((e.reason && e.reason.message) ? e.reason.message : String(e.reason)) + '\n'; } catch (x) {}
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        if (!window.__S2_MAIN_OK__) {
+          panel('#900').textContent += '主程式未完成：start=' + (!!window.__S2_MAIN_START__) + '（false 表示 Script 解析失敗）\n';
+        }
+      } catch (x) {}
+    }, 1800);
+  });
+})();
+</script>
+
+<script>
+window.__S2_MAIN_START__ = true;
 // 防長按／右鍵彈出瀏覽器選單（重新載入、下載、列印、分享等）
 document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-// ===== 臨時診斷：顯示 JS 執行進度＋錯誤（iPad 排障用，之後移除） =====
+// 執行進度僅記錄於主控台；可見的錯誤面板由頁首看門狗統一顯示
 function diag(msg) {
-  try {
-    let el = document.getElementById('diagErr');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'diagErr';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#a60;color:#fff;font:600 15px/1.5 sans-serif;padding:8px;white-space:pre-wrap;word-break:break-all;max-height:45vh;overflow:auto';
-      document.body.appendChild(el);
-    }
-    el.textContent += '[' + msg + '] ';
-  } catch (err) {}
+  try { console.log('[S2]', msg); } catch (err) {}
 }
-window.addEventListener('error', (e) => {
-  if (e.target !== window) return;
-  try {
-    let el = document.getElementById('diagErr');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'diagErr';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
-      document.body.appendChild(el);
-    }
-    el.style.background = '#900';
-    el.textContent += 'ERR: ' + (e.message || '') + ' @line ' + (e.lineno || '?') + '\n';
-  } catch (err) {}
-});
-window.addEventListener('unhandledrejection', (e) => {
-  try {
-    let el = document.getElementById('diagErr');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'diagErr';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#900;color:#fff;font:600 16px/1.4 sans-serif;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto';
-      document.body.appendChild(el);
-    }
-    el.style.background = '#900';
-    el.textContent += 'PROMISE: ' + ((e.reason && e.reason.message) ? e.reason.message : String(e.reason)) + '\n';
-  } catch (err) {}
-});
 diag('start');
 
 // ============================================================
@@ -960,21 +963,21 @@ const SPEED_PRESETS = [0.8, 1.0, 1.2, 1.4];
 // SEEK[i] = 句 (i+1) 的播放起點（句1 從 0 連續播完整檔，不用 SEEK）
 // TAIL[i] = 句 (i+1) 尾音延長
 const RECITE_MAP = {
-  聽雪: {
+  "聽雪": {
     offset: 0,
     START: [0.00, 5.00, 9.64, 14.00, 18.62, 24.34, 28.74, 36.64, 44.28, 48.78, 53.98, 57.38, 63.38, 68.02],
     END: [4.32, 9.64, 14.00, 18.62, 24.34, 28.74, 34.12, 42.48, 48.78, 52.28, 57.38, 62.68, 68.02, 75.10],
     SEEK: [0.00, 4.66, 10.00, 14.00, 18.90, 24.34, 29.20, 35.38, 43.38, 48.78, 53.13, 57.80, 63.03, 68.02],
     TAIL: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
   },
-  春夜喜雨: {
+  "春夜喜雨": {
     offset: 1,
     START: [0.82, 7.08, 10.98, 14.24, 16.88, 21.54, 24.18, 26.70, 30.06],
     END: [4.52, 9.96, 12.98, 16.10, 19.58, 23.44, 26.26, 29.56, 32.76],
     SEEK: [5.80, 10.47, 13.61, 16.49, 20.56, 23.81, 26.35, 29.81],
     TAIL: [0.7, 0.7, 0.30, 0.7, 0.35, 0.40, 0.20, 0.7]
   },
-  水仙子・尋梅: {
+  "水仙子・尋梅": {
     offset: 0,
     START: [2.50, 6.66, 11.68, 16.06, 19.14, 25.20, 28.36, 32.84],
     END: [5.74, 10.00, 14.64, 18.68, 23.88, 27.00, 30.64, 35.28],
@@ -2243,6 +2246,7 @@ if (document.fonts && document.fonts.ready) {
 }
 // 嘗試觸發 Android Chrome 收合網址欄，讓內容最大化（無害；不保證所有瀏覽器生效）
 setTimeout(() => { try { window.scrollTo(0, 1); } catch (e) {} }, 500);
+window.__S2_MAIN_OK__ = true;   // 主程式完整執行完畢（看門狗據此判斷）
 </script>
 <script>
 if ('serviceWorker' in navigator) {
