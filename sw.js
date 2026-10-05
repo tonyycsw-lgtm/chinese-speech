@@ -2,7 +2,7 @@
  * 1) 音檔 (.mp3)：快取優先 —— App 進場預載全部音檔後可離線播放
  * 2) 頁面／清單／圖示等其餘資源：網路優先 —— 改版即時生效，離線時回退快取
  */
-const PAGE_CACHE = 'page-v1';
+const PAGE_CACHE = 'page-v2';
 const ASSET_CACHE = 'asset-v1';
 
 self.addEventListener('install', () => {
