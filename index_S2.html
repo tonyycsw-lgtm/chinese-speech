@@ -940,7 +940,8 @@ let reciteSingleMode = false;   // true：上/下句後只播當前句，人聲�
 
 // 音色（循環切換；音檔夾僅提供 3 種分句音色，「朗讀」為真人分句朗讀音檔）
 const VOICES = ['Male-A', 'Male-B', 'Female', '朗讀'];
-let savedVoiceIdx = parseInt(localStorage.getItem('voiceIdx') || '0', 10);
+let savedVoiceIdx = 0;
+try { savedVoiceIdx = parseInt(localStorage.getItem('voiceIdx') || '0', 10); } catch (e) {}
 let voiceIdx = (savedVoiceIdx >= 0 && savedVoiceIdx < VOICES.length) ? savedVoiceIdx : 0;
 let currentVoice = VOICES[voiceIdx];
 
@@ -952,7 +953,8 @@ function poemHasRecite(poem) {
 // ============================================================
 // 全域狀態
 // ============================================================
-let savedPoemIdx = parseInt(localStorage.getItem('poemIdx') || '0', 10);
+let savedPoemIdx = 0;
+try { savedPoemIdx = parseInt(localStorage.getItem('poemIdx') || '0', 10); } catch (e) {}
 let currentSentIdx = (POEMS[savedPoemIdx] ? dataset.findIndex(s => s.poem === POEMS[savedPoemIdx]) : 0);
 currentSentIdx = currentSentIdx >= 0 ? currentSentIdx : 0;
 let speedRate = 1.0;
@@ -960,7 +962,8 @@ let speedPresetIdx = 1;
 let wakeLock = null;
 let audio = null;
 let isPlaying = false;
-let a11yMode = localStorage.getItem('a11yMode') === 'true';
+let a11yMode = false;
+try { a11yMode = localStorage.getItem('a11yMode') === 'true'; } catch (e) {}
 
 // 操作後續播標記
 let resumeAfterAction = false;
@@ -1052,7 +1055,7 @@ function applyMode() {
 
 function toggleA11yMode() {
   a11yMode = !a11yMode;
-  localStorage.setItem('a11yMode', a11yMode);
+  try { localStorage.setItem('a11yMode', a11yMode); } catch (e) {}
   applyMode();
   announce(a11yMode ? '已切換為無障礙模式' : '已切換為一般模式');
 }
@@ -1089,7 +1092,7 @@ function selectPoem(poemIdx) {
   resumeFromStart = false;
 
   currentSentIdx = dataset.findIndex(s => s.poem === poem);
-  localStorage.setItem('poemIdx', String(poemIdx));
+  try { localStorage.setItem('poemIdx', String(poemIdx)); } catch (e) {}
   renderSentence();
   requestAnimationFrame(fitFontSize);
   // 切換後若所選詩沒有「朗讀」音檔，自動跳回第一個音色
@@ -1124,7 +1127,7 @@ function cycleVoice() {
   }
   voiceIdx = next;
   currentVoice = VOICES[voiceIdx];
-  localStorage.setItem('voiceIdx', String(voiceIdx));
+  try { localStorage.setItem('voiceIdx', String(voiceIdx)); } catch (e) {}
   updateVoiceLabel();
   if (resumeAfterAction) {
     resumeAfterAction = false;

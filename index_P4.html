@@ -848,7 +848,8 @@ let speedPresetIdx = 1;
 let wakeLock = null;
 let audio = null;
 let isPlaying = false;
-let a11yMode = localStorage.getItem('a11yMode') === 'true';
+let a11yMode = false;
+try { a11yMode = localStorage.getItem('a11yMode') === 'true'; } catch (e) {}
 
 // 操作後續播標記
 let resumeAfterAction = false;
@@ -923,7 +924,7 @@ function applyMode() {
 
 function toggleA11yMode() {
   a11yMode = !a11yMode;
-  localStorage.setItem('a11yMode', a11yMode);
+  try { localStorage.setItem('a11yMode', a11yMode); } catch (e) {}
   applyMode();
   announce(a11yMode ? '已切換為無障礙模式' : '已切換為一般模式');
 }
