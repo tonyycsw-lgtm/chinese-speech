@@ -727,6 +727,8 @@ body.a11y-mode .mic-toast { font-size: 28px; }
 </style>
 </head>
 <body>
+<!-- 臨時診斷：靜態版本戳記（不靠 JS，確認是否載入新版） -->
+<div id="diagVer" style="position:fixed;bottom:4px;right:8px;z-index:99998;font:600 12px/1 sans-serif;color:#777;background:rgba(255,255,255,.7);padding:3px 7px;border-radius:6px">D2</div>
 
 <div aria-live="polite" class="sr-only" id="a11y-status"></div>
 <div class="mic-toast" id="micToast" role="alert"></div>
@@ -868,6 +870,7 @@ window.addEventListener('unhandledrejection', (e) => {
     el.textContent += 'PROMISE: ' + ((e.reason && e.reason.message) ? e.reason.message : String(e.reason)) + '\n';
   } catch (err) {}
 });
+diag('start');
 
 // ============================================================
 // 三首詩詞：水仙子・尋梅（喬吉）＋ 春夜喜雨（杜甫）＋ 聽雪（金波），共 30 段
